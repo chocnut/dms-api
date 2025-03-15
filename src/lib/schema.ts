@@ -2,6 +2,7 @@ import { Generated, GeneratedAlways } from 'kysely'
 
 export interface Database {
   documents: DocumentTable
+  folders: FolderTable
 }
 
 export interface DocumentTable {
