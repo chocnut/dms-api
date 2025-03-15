@@ -9,6 +9,8 @@
     "lint": "eslint . -c .eslintrc.json \"src/**/*.ts\"",
     "lint:fix": "eslint . -c .eslintrc.json \"src/**/*.ts\" --fix",
     "format": "prettier --write \"src/**/*.ts\"",
+    "db:migrate": "ts-node src/lib/db/runMigrations.ts",
+    "db:seed": "ts-node src/lib/db/run-seeds.ts",
     "docker:dev": "docker-compose -f docker-compose.dev.yml up"
   },
   "author": "pindiola@gmail.com",
