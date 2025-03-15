@@ -4,12 +4,15 @@ WORKDIR /app
 
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
+
 RUN corepack enable
 RUN corepack prepare pnpm@8.15.4 --activate
 
 COPY package.json pnpm-lock.yaml ./
 
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install
+RUN pnpm install --frozen-lockfile
+
+COPY . .
 
 EXPOSE 3000
 
