@@ -24,7 +24,6 @@ export const logger = (req: Request, res: Response, next: NextFunction): void =>
   const startTime = Date.now()
   const originalSend: SendFunction = res.send
 
-  // Type-safe wrapper for the send function
   res.send = function (this: Response, body: Send): Response {
     responseBodyStore.set(res, body)
     return originalSend.call(this, body)

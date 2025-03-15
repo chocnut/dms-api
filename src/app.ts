@@ -20,7 +20,6 @@ app.get('/health', (_req: Request, res: Response) => {
 
 app.use('/api', apiRoutes)
 
-// Error handling middleware
 app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
   console.error(err.stack)
   res.status(500).json({
