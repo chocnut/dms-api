@@ -7,7 +7,7 @@ export async function up(db: Kysely<any>) {
     .addColumn('name', 'varchar(255)', col => col.notNull())
     .addColumn('parent_id', 'integer', col => col.references('folders.id').onDelete('cascade'))
     .addColumn('created_by', 'varchar(255)', col => col.notNull())
-    .addColumn('created_at', 'timestamp', col => col.defaultTo('CURRENT_TIMESTAMP').notNull())
+    .addColumn('created_at', 'timestamp', col => col.defaultTo(sql`now()`).notNull())
     .addColumn('updated_at', 'timestamp', col => col.defaultTo(sql`now()`).notNull())
     .execute()
 
@@ -19,7 +19,7 @@ export async function up(db: Kysely<any>) {
     .addColumn('size', 'integer', col => col.notNull())
     .addColumn('folder_id', 'integer', col => col.references('folders.id').onDelete('cascade'))
     .addColumn('created_by', 'varchar(255)', col => col.notNull())
-    .addColumn('created_at', 'timestamp', col => col.defaultTo('CURRENT_TIMESTAMP').notNull())
+    .addColumn('created_at', 'timestamp', col => col.defaultTo(sql`now()`).notNull())
     .addColumn('updated_at', 'timestamp', col => col.defaultTo(sql`now()`).notNull())
     .execute()
 }

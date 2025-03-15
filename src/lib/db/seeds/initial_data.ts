@@ -2,7 +2,7 @@ import { Kysely } from 'kysely'
 import { Database } from '../schema'
 
 export async function seed(db: Kysely<Database>) {
-  const [appointmentFolder] = await db
+  await db
     .insertInto('folders')
     .values([
       {
@@ -16,8 +16,17 @@ export async function seed(db: Kysely<Database>) {
         created_by: 'John Green',
       },
     ])
-    .returning('id')
     .execute()
+
+  const appointmentFolder = await db
+    .selectFrom('folders')
+    .select('id')
+    .where('name', '=', 'Appointment resolutions')
+    .executeTakeFirst()
+
+  if (!appointmentFolder?.id) {
+    throw new Error('Failed to create appointment folder')
+  }
 
   await db
     .insertInto('documents')
