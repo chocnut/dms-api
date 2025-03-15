@@ -2,7 +2,7 @@ import express, { Request, Response, NextFunction } from 'express'
 import cors from 'cors'
 import helmet from 'helmet'
 import compression from 'compression'
-import { logger } from './middleware'
+import { logger, responseCapture } from './middleware'
 import apiRoutes from './routes'
 
 const app = express()
@@ -12,6 +12,7 @@ app.use(cors())
 app.use(compression())
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
+app.use(responseCapture)
 app.use(logger)
 
 app.get('/health', (_req: Request, res: Response) => {
