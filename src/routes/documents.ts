@@ -1,4 +1,4 @@
-import { Router } from 'express'
+import { Router, Request, Response, NextFunction } from 'express'
 import { db } from '../lib/db/config'
 import { DocumentResponse } from '../types/document'
 
@@ -9,7 +9,7 @@ const router = Router()
  * @description Get all documents with optional folder filtering
  * @access Public
  */
-router.get('/', async (req, res, next) => {
+router.get('/', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { folder_id } = req.query
 
