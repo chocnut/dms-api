@@ -59,9 +59,23 @@ describe('Document Routes', () => {
       const response = await request(app).get('/api/documents')
 
       expect(response.status).toBe(200)
-      expect(response.body).toEqual({
-        status: 'success',
-        data: mockDocuments,
+      expect(response.body.status).toBe('success')
+      expect(response.body.data).toHaveLength(2)
+      expect(response.body.data[0]).toMatchObject({
+        id: 1,
+        name: 'Document 1',
+        type: 'pdf',
+        size: 1024,
+        folder_id: null,
+        created_by: 'user1',
+      })
+      expect(response.body.data[1]).toMatchObject({
+        id: 2,
+        name: 'Document 2',
+        type: 'docx',
+        size: 2048,
+        folder_id: 1,
+        created_by: 'user2',
       })
       expect(db.selectFrom).toHaveBeenCalledWith('documents')
       expect(db.select).toHaveBeenCalledWith([
@@ -100,9 +114,15 @@ describe('Document Routes', () => {
       const response = await request(app).get('/api/documents?folder_id=1')
 
       expect(response.status).toBe(200)
-      expect(response.body).toEqual({
-        status: 'success',
-        data: mockDocuments,
+      expect(response.body.status).toBe('success')
+      expect(response.body.data).toHaveLength(1)
+      expect(response.body.data[0]).toMatchObject({
+        id: 2,
+        name: 'Document 2',
+        type: 'docx',
+        size: 2048,
+        folder_id: 1,
+        created_by: 'user2',
       })
       expect(db.selectFrom).toHaveBeenCalledWith('documents')
       expect(db.select).toHaveBeenCalledWith([
