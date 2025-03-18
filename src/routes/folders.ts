@@ -1,16 +1,33 @@
-import { Router, Request, Response, NextFunction } from 'express'
+import { Router, Request, Response } from 'express'
 import { db } from '../lib/db/config'
-import { FolderResponse, SingleFolderResponse, CreateFolderRequest } from '../types/folder'
+import { FolderResponse, SingleFolderResponse } from '../types/folder'
+import { z } from 'zod'
+import { asyncHandler } from '../utils/routeHandler'
 
 const router = Router()
 
 /**
- * @route GET /api/folders
- * @description Get all folders
- * @access Public
+ * @swagger
+ * /folders:
+ *   get:
+ *     summary: Get all folders
+ *     description: Retrieve a list of all folders, optionally filtered by parent_id
+ *     tags: [Folders]
+ *     parameters:
+ *       - in: query
+ *         name: parent_id
+ *         schema:
+ *           type: integer
+ *         description: Filter folders by parent folder ID
+ *     responses:
+ *       200:
+ *         $ref: '#/components/responses/FolderResponse'
+ *       500:
+ *         $ref: '#/components/responses/ErrorResponse'
  */
-router.get('/', async (req: Request, res: Response, next: NextFunction) => {
-  try {
+router.get(
+  '/',
+  asyncHandler(async (req: Request, res: Response): Promise<void> => {
     const { parent_id } = req.query
 
     let query = db
@@ -30,16 +47,15 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
     }
 
     res.json(response)
-  } catch (error) {
-    next(error)
-  }
-})
+  })
+)
 
 /**
  * @swagger
  * /folders:
  *   post:
  *     summary: Create a new folder
+ *     description: Create a new folder in the system
  *     tags: [Folders]
  *     requestBody:
  *       required: true
@@ -65,10 +81,18 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
  *       500:
  *         $ref: '#/components/responses/ErrorResponse'
  */
-router.post('/', (req: Request, res: Response, next: NextFunction) => {
-  void (async () => {
+router.post(
+  '/',
+  asyncHandler(async (req: Request, res: Response): Promise<void> => {
     try {
-      const { name, parent_id, created_by } = req.body as CreateFolderRequest
+      const folderSchema = z.object({
+        name: z.string().min(1).max(255),
+        parent_id: z.number().nullable().optional(),
+        created_by: z.string().min(1).max(100),
+      })
+
+      const validatedBody = await folderSchema.parseAsync(req.body)
+      const { name, parent_id, created_by } = validatedBody
 
       const folder = await db
         .insertInto('folders')
@@ -95,9 +119,20 @@ router.post('/', (req: Request, res: Response, next: NextFunction) => {
 
       res.status(201).json(response)
     } catch (error) {
-      next(error)
+      if (error instanceof z.ZodError) {
+        res.status(400).json({
+          status: 'error',
+          message: 'Validation failed',
+          errors: error.errors.map(err => ({
+            path: err.path.join('.'),
+            message: err.message,
+          })),
+        })
+        return
+      }
+      throw error
     }
-  })()
-})
+  })
+)
 
 export default router

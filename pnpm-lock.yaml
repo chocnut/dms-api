@@ -35,6 +35,9 @@ dependencies:
   swagger-ui-express:
     specifier: ^5.0.1
     version: 5.0.1(express@4.21.2)
+  zod:
+    specifier: ^3.24.2
+    version: 3.24.2
 
 devDependencies:
   '@commitlint/cli':
@@ -3992,4 +3995,8 @@ packages:
       validator: 13.12.0
     optionalDependencies:
       commander: 9.5.0
+    dev: false
+
+  /zod@3.24.2:
+    resolution: {integrity: sha512-lY7CDW43ECgW9u1TcT3IoXHflywfVqDYze4waEz812jR/bZ8FHDsl7pFQoSZTz5N+2NqRXs8GBwnAwo3ZNxqhQ==}
     dev: false

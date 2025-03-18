@@ -1,6 +1,8 @@
-import { Router, Request, Response, NextFunction } from 'express'
+import { Router, Request, Response } from 'express'
 import { db } from '../lib/db/config'
-import { DocumentResponse, SingleDocumentResponse, CreateDocumentRequest } from '../types/document'
+import { DocumentResponse, SingleDocumentResponse } from '../types/document'
+import { z } from 'zod'
+import { asyncHandler } from '../utils/routeHandler'
 
 const router = Router()
 
@@ -23,8 +25,9 @@ const router = Router()
  *       500:
  *         $ref: '#/components/responses/ErrorResponse'
  */
-router.get('/', async (req: Request, res: Response, next: NextFunction) => {
-  try {
+router.get(
+  '/',
+  asyncHandler(async (req: Request, res: Response): Promise<void> => {
     const { folder_id } = req.query
 
     let query = db
@@ -32,7 +35,6 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
       .select(['id', 'name', 'type', 'size', 'folder_id', 'created_by', 'created_at'])
       .orderBy('created_at', 'desc')
 
-    // Filter by folder_id if provided
     if (folder_id) {
       query = query.where('folder_id', '=', Number(folder_id))
     }
@@ -45,10 +47,8 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
     }
 
     res.json(response)
-  } catch (error) {
-    next(error)
-  }
-})
+  })
+)
 
 /**
  * @swagger
@@ -87,10 +87,20 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
  *       500:
  *         $ref: '#/components/responses/ErrorResponse'
  */
-router.post('/', (req: Request, res: Response, next: NextFunction) => {
-  void (async () => {
+router.post(
+  '/',
+  asyncHandler(async (req: Request, res: Response): Promise<void> => {
     try {
-      const { name, type, size, folder_id, created_by } = req.body as CreateDocumentRequest
+      const documentSchema = z.object({
+        name: z.string().min(1).max(255),
+        type: z.string().min(1).max(50),
+        size: z.number().positive(),
+        folder_id: z.number().nullable().optional(),
+        created_by: z.string().min(1).max(100),
+      })
+
+      const validatedBody = await documentSchema.parseAsync(req.body)
+      const { name, type, size, folder_id, created_by } = validatedBody
 
       const document = await db
         .insertInto('documents')
@@ -119,9 +129,20 @@ router.post('/', (req: Request, res: Response, next: NextFunction) => {
 
       res.status(201).json(response)
     } catch (error) {
-      next(error)
+      if (error instanceof z.ZodError) {
+        res.status(400).json({
+          status: 'error',
+          message: 'Validation failed',
+          errors: error.errors.map(err => ({
+            path: err.path.join('.'),
+            message: err.message,
+          })),
+        })
+        return
+      }
+      throw error
     }
-  })()
-})
+  })
+)
 
 export default router
