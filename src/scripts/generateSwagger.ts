@@ -12,10 +12,8 @@ async function generateSwaggerDocs() {
     const outputPath = path.join(outputDir, 'swagger.json')
     fs.writeFileSync(outputPath, JSON.stringify(swaggerSpec, null, 2), 'utf8')
 
-    console.log(`✅ Swagger documentation generated at ${outputPath}`)
     return true
   } catch (error) {
-    console.error('❌ Error generating Swagger documentation:', error)
     return false
   }
 }
