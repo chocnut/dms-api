@@ -2,6 +2,8 @@ import express, { Request, Response, NextFunction } from 'express'
 import cors from 'cors'
 import helmet from 'helmet'
 import compression from 'compression'
+import swaggerUi from 'swagger-ui-express'
+import swaggerSpec from './lib/swagger'
 import { logger, responseCapture } from './middleware'
 import apiRoutes from './routes'
 
@@ -18,6 +20,8 @@ app.use(logger)
 app.get('/health', (_req: Request, res: Response) => {
   res.json({ status: 'ok' })
 })
+
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec))
 
 app.use('/api', apiRoutes)
 

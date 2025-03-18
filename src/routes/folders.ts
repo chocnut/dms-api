@@ -5,9 +5,23 @@ import { FolderResponse, SingleFolderResponse, CreateFolderRequest } from '../ty
 const router = Router()
 
 /**
- * @route GET /api/folders
- * @description Get all folders
- * @access Public
+ * @swagger
+ * /folders:
+ *   get:
+ *     summary: Get all folders
+ *     description: Retrieve a list of all folders, optionally filtered by parent_id
+ *     tags: [Folders]
+ *     parameters:
+ *       - in: query
+ *         name: parent_id
+ *         schema:
+ *           type: integer
+ *         description: Filter folders by parent folder ID
+ *     responses:
+ *       200:
+ *         $ref: '#/components/responses/FolderResponse'
+ *       500:
+ *         $ref: '#/components/responses/ErrorResponse'
  */
 router.get('/', async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -36,9 +50,39 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
 })
 
 /**
- * @route POST /api/folders
- * @description Create a new folder
- * @access Public
+ * @swagger
+ * /folders:
+ *   post:
+ *     summary: Create a new folder
+ *     description: Create a new folder in the system
+ *     tags: [Folders]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - name
+ *               - created_by
+ *             properties:
+ *               name:
+ *                 type: string
+ *                 description: Folder name
+ *               parent_id:
+ *                 type: integer
+ *                 nullable: true
+ *                 description: ID of the parent folder
+ *               created_by:
+ *                 type: string
+ *                 description: User who created the folder
+ *     responses:
+ *       201:
+ *         $ref: '#/components/responses/SingleFolderResponse'
+ *       400:
+ *         $ref: '#/components/responses/ErrorResponse'
+ *       500:
+ *         $ref: '#/components/responses/ErrorResponse'
  */
 router.post('/', async (req: Request, res: Response, next: NextFunction) => {
   try {
