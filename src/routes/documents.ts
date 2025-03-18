@@ -252,7 +252,7 @@ router.put(
       }
 
       const document = await db
-        .update('documents')
+        .updateTable('documents')
         .set(validatedBody)
         .where('id', '=', id)
         .returning(['id', 'name', 'type', 'size', 'folder_id', 'created_by', 'created_at'])
