@@ -4,8 +4,8 @@ import express from 'express'
 import documentRoutes from '../../routes/documents'
 import { db } from '../../lib/db/config'
 
-vi.mock('../../lib/db/config', () => ({
-  db: {
+vi.mock('../../lib/db/config', () => {
+  const mockDb = {
     selectFrom: vi.fn().mockReturnThis(),
     select: vi.fn().mockReturnThis(),
     where: vi.fn().mockReturnThis(),
@@ -15,8 +15,12 @@ vi.mock('../../lib/db/config', () => ({
     values: vi.fn().mockReturnThis(),
     returning: vi.fn().mockReturnThis(),
     executeTakeFirst: vi.fn(),
-  },
-}))
+    deleteFrom: vi.fn().mockReturnThis(),
+    update: vi.fn().mockReturnThis(),
+    set: vi.fn().mockReturnThis(),
+  }
+  return { db: mockDb }
+})
 
 describe('Document Routes', () => {
   let app: express.Application
@@ -240,6 +244,196 @@ describe('Document Routes', () => {
         'created_at',
       ])
       expect(db.executeTakeFirst).toHaveBeenCalled()
+    })
+  })
+
+  describe('GET /api/documents/:id', () => {
+    it('should return a single document by ID', async () => {
+      const mockDocument = {
+        id: 1,
+        name: 'Test Document.pdf',
+        type: 'pdf',
+        size: 1024,
+        folder_id: null,
+        created_by: 'user1',
+        created_at: new Date(),
+      }
+
+      vi.mocked(db.selectFrom).mockReturnThis()
+      vi.mocked(db.select).mockReturnThis()
+      vi.mocked(db.where).mockReturnThis()
+      vi.mocked(db.executeTakeFirst).mockResolvedValue(mockDocument)
+
+      const response = await request(app).get('/api/documents/1')
+
+      expect(response.status).toBe(200)
+      expect(response.body.status).toBe('success')
+      expect(response.body.data).toMatchObject({
+        id: 1,
+        name: 'Test Document.pdf',
+        type: 'pdf',
+        size: 1024,
+        folder_id: null,
+        created_by: 'user1',
+      })
+      expect(db.selectFrom).toHaveBeenCalledWith('documents')
+      expect(db.select).toHaveBeenCalledWith([
+        'id',
+        'name',
+        'type',
+        'size',
+        'folder_id',
+        'created_by',
+        'created_at',
+      ])
+      expect(db.where).toHaveBeenCalledWith('id', '=', 1)
+      expect(db.executeTakeFirst).toHaveBeenCalled()
+    })
+
+    it('should return 404 if document not found', async () => {
+      vi.mocked(db.selectFrom).mockReturnThis()
+      vi.mocked(db.select).mockReturnThis()
+      vi.mocked(db.where).mockReturnThis()
+      vi.mocked(db.executeTakeFirst).mockResolvedValue(null)
+
+      const response = await request(app).get('/api/documents/999')
+
+      expect(response.status).toBe(404)
+      expect(response.body.status).toBe('error')
+      expect(response.body.message).toBe('Document not found')
+    })
+  })
+
+  describe('PUT /api/documents/:id', () => {
+    it('should update a document', async () => {
+      const documentUpdate = {
+        name: 'Updated Document.pdf',
+        folder_id: 1,
+      }
+
+      const updatedDocument = {
+        id: 1,
+        name: 'Updated Document.pdf',
+        type: 'pdf',
+        size: 1024,
+        folder_id: 1,
+        created_by: 'user1',
+        created_at: new Date(),
+      }
+
+      vi.mocked(db.update).mockReturnThis()
+      vi.mocked(db.set).mockReturnThis()
+      vi.mocked(db.where).mockReturnThis()
+      vi.mocked(db.returning).mockReturnThis()
+      vi.mocked(db.executeTakeFirst).mockResolvedValue(updatedDocument)
+
+      const response = await request(app)
+        .put('/api/documents/1')
+        .send(documentUpdate)
+        .set('Content-Type', 'application/json')
+
+      expect(response.status).toBe(200)
+      expect(response.body.status).toBe('success')
+      expect(response.body.data).toMatchObject({
+        id: 1,
+        name: 'Updated Document.pdf',
+        type: 'pdf',
+        size: 1024,
+        folder_id: 1,
+        created_by: 'user1',
+      })
+      expect(db.update).toHaveBeenCalledWith('documents')
+      expect(db.set).toHaveBeenCalledWith({
+        name: 'Updated Document.pdf',
+        folder_id: 1,
+      })
+      expect(db.where).toHaveBeenCalledWith('id', '=', 1)
+      expect(db.returning).toHaveBeenCalledWith([
+        'id',
+        'name',
+        'type',
+        'size',
+        'folder_id',
+        'created_by',
+        'created_at',
+      ])
+      expect(db.executeTakeFirst).toHaveBeenCalled()
+    })
+
+    it('should return 404 if document to update is not found', async () => {
+      const documentUpdate = {
+        name: 'Updated Document.pdf',
+      }
+
+      vi.mocked(db.update).mockReturnThis()
+      vi.mocked(db.set).mockReturnThis()
+      vi.mocked(db.where).mockReturnThis()
+      vi.mocked(db.returning).mockReturnThis()
+      vi.mocked(db.executeTakeFirst).mockResolvedValue(null)
+
+      const response = await request(app)
+        .put('/api/documents/999')
+        .send(documentUpdate)
+        .set('Content-Type', 'application/json')
+
+      expect(response.status).toBe(404)
+      expect(response.body.status).toBe('error')
+      expect(response.body.message).toBe('Document not found')
+    })
+  })
+
+  describe('DELETE /api/documents/:id', () => {
+    it('should delete a document', async () => {
+      const deletedDocument = {
+        id: 1,
+        name: 'Deleted Document.pdf',
+        type: 'pdf',
+        size: 1024,
+        folder_id: null,
+        created_by: 'user1',
+        created_at: new Date(),
+      }
+
+      vi.mocked(db.deleteFrom).mockReturnThis()
+      vi.mocked(db.where).mockReturnThis()
+      vi.mocked(db.returning).mockReturnThis()
+      vi.mocked(db.executeTakeFirst).mockResolvedValue(deletedDocument)
+
+      const response = await request(app).delete('/api/documents/1')
+
+      expect(response.status).toBe(200)
+      expect(response.body.status).toBe('success')
+      expect(response.body.data).toMatchObject({
+        id: 1,
+        name: 'Deleted Document.pdf',
+        type: 'pdf',
+        size: 1024,
+      })
+      expect(db.deleteFrom).toHaveBeenCalledWith('documents')
+      expect(db.where).toHaveBeenCalledWith('id', '=', 1)
+      expect(db.returning).toHaveBeenCalledWith([
+        'id',
+        'name',
+        'type',
+        'size',
+        'folder_id',
+        'created_by',
+        'created_at',
+      ])
+      expect(db.executeTakeFirst).toHaveBeenCalled()
+    })
+
+    it('should return 404 if document to delete is not found', async () => {
+      vi.mocked(db.deleteFrom).mockReturnThis()
+      vi.mocked(db.where).mockReturnThis()
+      vi.mocked(db.returning).mockReturnThis()
+      vi.mocked(db.executeTakeFirst).mockResolvedValue(null)
+
+      const response = await request(app).delete('/api/documents/999')
+
+      expect(response.status).toBe(404)
+      expect(response.body.status).toBe('error')
+      expect(response.body.message).toBe('Document not found')
     })
   })
 })

@@ -52,6 +52,56 @@ router.get(
 
 /**
  * @swagger
+ * /folders/{id}:
+ *   get:
+ *     summary: Get a folder by ID
+ *     description: Retrieve a single folder by its ID
+ *     tags: [Folders]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: integer
+ *         required: true
+ *         description: Folder ID
+ *     responses:
+ *       200:
+ *         $ref: '#/components/responses/SingleFolderResponse'
+ *       404:
+ *         $ref: '#/components/responses/ErrorResponse'
+ *       500:
+ *         $ref: '#/components/responses/ErrorResponse'
+ */
+router.get(
+  '/:id',
+  asyncHandler(async (req: Request, res: Response): Promise<void> => {
+    const id = Number(req.params.id)
+
+    const folder = await db
+      .selectFrom('folders')
+      .select(['id', 'name', 'parent_id', 'created_by', 'created_at'])
+      .where('id', '=', id)
+      .executeTakeFirst()
+
+    if (!folder) {
+      res.status(404).json({
+        status: 'error',
+        message: 'Folder not found',
+      })
+      return
+    }
+
+    const response: SingleFolderResponse = {
+      status: 'success',
+      data: folder,
+    }
+
+    res.json(response)
+  })
+)
+
+/**
+ * @swagger
  * /folders:
  *   post:
  *     summary: Create a new folder
@@ -132,6 +182,150 @@ router.post(
       }
       throw error
     }
+  })
+)
+
+/**
+ * @swagger
+ * /folders/{id}:
+ *   put:
+ *     summary: Update a folder
+ *     description: Update an existing folder
+ *     tags: [Folders]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: integer
+ *         required: true
+ *         description: Folder ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *               parent_id:
+ *                 type: integer
+ *     responses:
+ *       200:
+ *         $ref: '#/components/responses/SingleFolderResponse'
+ *       400:
+ *         $ref: '#/components/responses/ErrorResponse'
+ *       404:
+ *         $ref: '#/components/responses/ErrorResponse'
+ *       500:
+ *         $ref: '#/components/responses/ErrorResponse'
+ */
+router.put(
+  '/:id',
+  asyncHandler(async (req: Request, res: Response): Promise<void> => {
+    try {
+      const id = Number(req.params.id)
+
+      const folderSchema = z.object({
+        name: z.string().min(1).max(255).optional(),
+        parent_id: z.number().nullable().optional(),
+      })
+
+      const validatedBody = await folderSchema.parseAsync(req.body)
+
+      if (Object.keys(validatedBody).length === 0) {
+        res.status(400).json({
+          status: 'error',
+          message: 'No valid fields to update',
+        })
+        return
+      }
+
+      const folder = await db
+        .update('folders')
+        .set(validatedBody)
+        .where('id', '=', id)
+        .returning(['id', 'name', 'parent_id', 'created_by', 'created_at'])
+        .executeTakeFirst()
+
+      if (!folder) {
+        res.status(404).json({
+          status: 'error',
+          message: 'Folder not found',
+        })
+        return
+      }
+
+      const response: SingleFolderResponse = {
+        status: 'success',
+        data: folder,
+      }
+
+      res.json(response)
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({
+          status: 'error',
+          message: 'Validation failed',
+          errors: error.errors.map(err => ({
+            path: err.path.join('.'),
+            message: err.message,
+          })),
+        })
+        return
+      }
+      throw error
+    }
+  })
+)
+
+/**
+ * @swagger
+ * /folders/{id}:
+ *   delete:
+ *     summary: Delete a folder
+ *     description: Delete a folder and all its contents
+ *     tags: [Folders]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: integer
+ *         required: true
+ *         description: Folder ID
+ *     responses:
+ *       200:
+ *         $ref: '#/components/responses/SingleFolderResponse'
+ *       404:
+ *         $ref: '#/components/responses/ErrorResponse'
+ *       500:
+ *         $ref: '#/components/responses/ErrorResponse'
+ */
+router.delete(
+  '/:id',
+  asyncHandler(async (req: Request, res: Response): Promise<void> => {
+    const id = Number(req.params.id)
+
+    const folder = await db
+      .deleteFrom('folders')
+      .where('id', '=', id)
+      .returning(['id', 'name', 'parent_id', 'created_by', 'created_at'])
+      .executeTakeFirst()
+
+    if (!folder) {
+      res.status(404).json({
+        status: 'error',
+        message: 'Folder not found',
+      })
+      return
+    }
+
+    const response: SingleFolderResponse = {
+      status: 'success',
+      data: folder,
+    }
+
+    res.json(response)
   })
 )
 

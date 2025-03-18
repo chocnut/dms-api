@@ -4,8 +4,8 @@ import express from 'express'
 import folderRoutes from '../../routes/folders'
 import { db } from '../../lib/db/config'
 
-vi.mock('../../lib/db/config', () => ({
-  db: {
+vi.mock('../../lib/db/config', () => {
+  const mockDb = {
     selectFrom: vi.fn().mockReturnThis(),
     select: vi.fn().mockReturnThis(),
     where: vi.fn().mockReturnThis(),
@@ -15,8 +15,12 @@ vi.mock('../../lib/db/config', () => ({
     values: vi.fn().mockReturnThis(),
     returning: vi.fn().mockReturnThis(),
     executeTakeFirst: vi.fn(),
-  },
-}))
+    deleteFrom: vi.fn().mockReturnThis(),
+    update: vi.fn().mockReturnThis(),
+    set: vi.fn().mockReturnThis(),
+  }
+  return { db: mockDb }
+})
 
 describe('Folder Routes', () => {
   let app: express.Application
@@ -172,6 +176,174 @@ describe('Folder Routes', () => {
         'created_at',
       ])
       expect(db.executeTakeFirst).toHaveBeenCalled()
+    })
+  })
+
+  describe('GET /api/folders/:id', () => {
+    it('should return a single folder by ID', async () => {
+      const mockFolder = {
+        id: 1,
+        name: 'Test Folder',
+        parent_id: null,
+        created_by: 'user1',
+        created_at: new Date(),
+      }
+
+      vi.mocked(db.selectFrom).mockReturnThis()
+      vi.mocked(db.select).mockReturnThis()
+      vi.mocked(db.where).mockReturnThis()
+      vi.mocked(db.executeTakeFirst).mockResolvedValue(mockFolder)
+
+      const response = await request(app).get('/api/folders/1')
+
+      expect(response.status).toBe(200)
+      expect(response.body.status).toBe('success')
+      expect(response.body.data).toMatchObject({
+        id: 1,
+        name: 'Test Folder',
+        parent_id: null,
+        created_by: 'user1',
+      })
+      expect(db.selectFrom).toHaveBeenCalledWith('folders')
+      expect(db.select).toHaveBeenCalledWith([
+        'id',
+        'name',
+        'parent_id',
+        'created_by',
+        'created_at',
+      ])
+      expect(db.where).toHaveBeenCalledWith('id', '=', 1)
+      expect(db.executeTakeFirst).toHaveBeenCalled()
+    })
+
+    it('should return 404 if folder not found', async () => {
+      vi.mocked(db.selectFrom).mockReturnThis()
+      vi.mocked(db.select).mockReturnThis()
+      vi.mocked(db.where).mockReturnThis()
+      vi.mocked(db.executeTakeFirst).mockResolvedValue(null)
+
+      const response = await request(app).get('/api/folders/999')
+
+      expect(response.status).toBe(404)
+      expect(response.body.status).toBe('error')
+      expect(response.body.message).toBe('Folder not found')
+    })
+  })
+
+  describe('PUT /api/folders/:id', () => {
+    it('should update a folder', async () => {
+      const folderUpdate = {
+        name: 'Updated Folder',
+      }
+
+      const updatedFolder = {
+        id: 1,
+        name: 'Updated Folder',
+        parent_id: null,
+        created_by: 'user1',
+        created_at: new Date(),
+      }
+
+      vi.mocked(db.update).mockReturnThis()
+      vi.mocked(db.set).mockReturnThis()
+      vi.mocked(db.where).mockReturnThis()
+      vi.mocked(db.returning).mockReturnThis()
+      vi.mocked(db.executeTakeFirst).mockResolvedValue(updatedFolder)
+
+      const response = await request(app)
+        .put('/api/folders/1')
+        .send(folderUpdate)
+        .set('Content-Type', 'application/json')
+
+      expect(response.status).toBe(200)
+      expect(response.body.status).toBe('success')
+      expect(response.body.data).toMatchObject({
+        id: 1,
+        name: 'Updated Folder',
+        parent_id: null,
+        created_by: 'user1',
+      })
+      expect(db.update).toHaveBeenCalledWith('folders')
+      expect(db.set).toHaveBeenCalledWith({ name: 'Updated Folder' })
+      expect(db.where).toHaveBeenCalledWith('id', '=', 1)
+      expect(db.returning).toHaveBeenCalledWith([
+        'id',
+        'name',
+        'parent_id',
+        'created_by',
+        'created_at',
+      ])
+      expect(db.executeTakeFirst).toHaveBeenCalled()
+    })
+
+    it('should return 404 if folder to update is not found', async () => {
+      const folderUpdate = {
+        name: 'Updated Folder',
+      }
+
+      vi.mocked(db.update).mockReturnThis()
+      vi.mocked(db.set).mockReturnThis()
+      vi.mocked(db.where).mockReturnThis()
+      vi.mocked(db.returning).mockReturnThis()
+      vi.mocked(db.executeTakeFirst).mockResolvedValue(null)
+
+      const response = await request(app)
+        .put('/api/folders/999')
+        .send(folderUpdate)
+        .set('Content-Type', 'application/json')
+
+      expect(response.status).toBe(404)
+      expect(response.body.status).toBe('error')
+      expect(response.body.message).toBe('Folder not found')
+    })
+  })
+
+  describe('DELETE /api/folders/:id', () => {
+    it('should delete a folder', async () => {
+      const deletedFolder = {
+        id: 1,
+        name: 'Deleted Folder',
+        parent_id: null,
+        created_by: 'user1',
+        created_at: new Date(),
+      }
+
+      vi.mocked(db.deleteFrom).mockReturnThis()
+      vi.mocked(db.where).mockReturnThis()
+      vi.mocked(db.returning).mockReturnThis()
+      vi.mocked(db.executeTakeFirst).mockResolvedValue(deletedFolder)
+
+      const response = await request(app).delete('/api/folders/1')
+
+      expect(response.status).toBe(200)
+      expect(response.body.status).toBe('success')
+      expect(response.body.data).toMatchObject({
+        id: 1,
+        name: 'Deleted Folder',
+      })
+      expect(db.deleteFrom).toHaveBeenCalledWith('folders')
+      expect(db.where).toHaveBeenCalledWith('id', '=', 1)
+      expect(db.returning).toHaveBeenCalledWith([
+        'id',
+        'name',
+        'parent_id',
+        'created_by',
+        'created_at',
+      ])
+      expect(db.executeTakeFirst).toHaveBeenCalled()
+    })
+
+    it('should return 404 if folder to delete is not found', async () => {
+      vi.mocked(db.deleteFrom).mockReturnThis()
+      vi.mocked(db.where).mockReturnThis()
+      vi.mocked(db.returning).mockReturnThis()
+      vi.mocked(db.executeTakeFirst).mockResolvedValue(null)
+
+      const response = await request(app).delete('/api/folders/999')
+
+      expect(response.status).toBe(404)
+      expect(response.body.status).toBe('error')
+      expect(response.body.message).toBe('Folder not found')
     })
   })
 })

@@ -52,6 +52,56 @@ router.get(
 
 /**
  * @swagger
+ * /documents/{id}:
+ *   get:
+ *     summary: Get a document by ID
+ *     description: Retrieve a single document by its ID
+ *     tags: [Documents]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: integer
+ *         required: true
+ *         description: Document ID
+ *     responses:
+ *       200:
+ *         $ref: '#/components/responses/SingleDocumentResponse'
+ *       404:
+ *         $ref: '#/components/responses/ErrorResponse'
+ *       500:
+ *         $ref: '#/components/responses/ErrorResponse'
+ */
+router.get(
+  '/:id',
+  asyncHandler(async (req: Request, res: Response): Promise<void> => {
+    const id = Number(req.params.id)
+
+    const document = await db
+      .selectFrom('documents')
+      .select(['id', 'name', 'type', 'size', 'folder_id', 'created_by', 'created_at'])
+      .where('id', '=', id)
+      .executeTakeFirst()
+
+    if (!document) {
+      res.status(404).json({
+        status: 'error',
+        message: 'Document not found',
+      })
+      return
+    }
+
+    const response: SingleDocumentResponse = {
+      status: 'success',
+      data: document,
+    }
+
+    res.json(response)
+  })
+)
+
+/**
+ * @swagger
  * /documents:
  *   post:
  *     summary: Create a new document
@@ -142,6 +192,150 @@ router.post(
       }
       throw error
     }
+  })
+)
+
+/**
+ * @swagger
+ * /documents/{id}:
+ *   put:
+ *     summary: Update a document
+ *     description: Update an existing document's metadata
+ *     tags: [Documents]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: integer
+ *         required: true
+ *         description: Document ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *               folder_id:
+ *                 type: integer
+ *     responses:
+ *       200:
+ *         $ref: '#/components/responses/SingleDocumentResponse'
+ *       400:
+ *         $ref: '#/components/responses/ErrorResponse'
+ *       404:
+ *         $ref: '#/components/responses/ErrorResponse'
+ *       500:
+ *         $ref: '#/components/responses/ErrorResponse'
+ */
+router.put(
+  '/:id',
+  asyncHandler(async (req: Request, res: Response): Promise<void> => {
+    try {
+      const id = Number(req.params.id)
+
+      const documentSchema = z.object({
+        name: z.string().min(1).max(255).optional(),
+        folder_id: z.number().nullable().optional(),
+      })
+
+      const validatedBody = await documentSchema.parseAsync(req.body)
+
+      if (Object.keys(validatedBody).length === 0) {
+        res.status(400).json({
+          status: 'error',
+          message: 'No valid fields to update',
+        })
+        return
+      }
+
+      const document = await db
+        .update('documents')
+        .set(validatedBody)
+        .where('id', '=', id)
+        .returning(['id', 'name', 'type', 'size', 'folder_id', 'created_by', 'created_at'])
+        .executeTakeFirst()
+
+      if (!document) {
+        res.status(404).json({
+          status: 'error',
+          message: 'Document not found',
+        })
+        return
+      }
+
+      const response: SingleDocumentResponse = {
+        status: 'success',
+        data: document,
+      }
+
+      res.json(response)
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({
+          status: 'error',
+          message: 'Validation failed',
+          errors: error.errors.map(err => ({
+            path: err.path.join('.'),
+            message: err.message,
+          })),
+        })
+        return
+      }
+      throw error
+    }
+  })
+)
+
+/**
+ * @swagger
+ * /documents/{id}:
+ *   delete:
+ *     summary: Delete a document
+ *     description: Delete a document from the system
+ *     tags: [Documents]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: integer
+ *         required: true
+ *         description: Document ID
+ *     responses:
+ *       200:
+ *         $ref: '#/components/responses/SingleDocumentResponse'
+ *       404:
+ *         $ref: '#/components/responses/ErrorResponse'
+ *       500:
+ *         $ref: '#/components/responses/ErrorResponse'
+ */
+router.delete(
+  '/:id',
+  asyncHandler(async (req: Request, res: Response): Promise<void> => {
+    const id = Number(req.params.id)
+
+    const document = await db
+      .deleteFrom('documents')
+      .where('id', '=', id)
+      .returning(['id', 'name', 'type', 'size', 'folder_id', 'created_by', 'created_at'])
+      .executeTakeFirst()
+
+    if (!document) {
+      res.status(404).json({
+        status: 'error',
+        message: 'Document not found',
+      })
+      return
+    }
+
+    const response: SingleDocumentResponse = {
+      status: 'success',
+      data: document,
+    }
+
+    res.json(response)
   })
 )
 
