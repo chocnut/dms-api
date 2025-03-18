@@ -71,20 +71,14 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
  *             properties:
  *               name:
  *                 type: string
- *                 description: Document name
  *               type:
  *                 type: string
- *                 description: Document type (e.g., pdf, docx)
  *               size:
  *                 type: integer
- *                 description: Document size in bytes
  *               folder_id:
  *                 type: integer
- *                 nullable: true
- *                 description: ID of the folder to place the document in
  *               created_by:
  *                 type: string
- *                 description: User who created the document
  *     responses:
  *       201:
  *         $ref: '#/components/responses/SingleDocumentResponse'
@@ -93,38 +87,41 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
  *       500:
  *         $ref: '#/components/responses/ErrorResponse'
  */
-router.post('/', async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const { name, type, size, folder_id, created_by } = req.body as CreateDocumentRequest
+router.post('/', (req: Request, res: Response, next: NextFunction) => {
+  void (async () => {
+    try {
+      const { name, type, size, folder_id, created_by } = req.body as CreateDocumentRequest
 
-    const document = await db
-      .insertInto('documents')
-      .values({
-        name,
-        type,
-        size,
-        folder_id: folder_id || null,
-        created_by,
-      })
-      .returning(['id', 'name', 'type', 'size', 'folder_id', 'created_by', 'created_at'])
-      .executeTakeFirst()
+      const document = await db
+        .insertInto('documents')
+        .values({
+          name,
+          type,
+          size,
+          folder_id: folder_id || null,
+          created_by,
+        })
+        .returning(['id', 'name', 'type', 'size', 'folder_id', 'created_by', 'created_at'])
+        .executeTakeFirst()
 
-    if (!document) {
-      return res.status(400).json({
-        status: 'error',
-        message: 'Failed to create document',
-      })
+      if (!document) {
+        res.status(400).json({
+          status: 'error',
+          message: 'Failed to create document',
+        })
+        return
+      }
+
+      const response: SingleDocumentResponse = {
+        status: 'success',
+        data: document,
+      }
+
+      res.status(201).json(response)
+    } catch (error) {
+      next(error)
     }
-
-    const response: SingleDocumentResponse = {
-      status: 'success',
-      data: document,
-    }
-
-    res.status(201).json(response)
-  } catch (error) {
-    next(error)
-  }
+  })()
 })
 
 export default router

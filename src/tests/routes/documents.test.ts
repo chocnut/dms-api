@@ -4,7 +4,6 @@ import express from 'express'
 import documentRoutes from '../../routes/documents'
 import { db } from '../../lib/db/config'
 
-// Mock the database
 vi.mock('../../lib/db/config', () => ({
   db: {
     selectFrom: vi.fn().mockReturnThis(),
@@ -27,7 +26,6 @@ describe('Document Routes', () => {
     app.use(express.json())
     app.use('/api/documents', documentRoutes)
 
-    // Reset mocks
     vi.clearAllMocks()
   })
 
@@ -54,7 +52,6 @@ describe('Document Routes', () => {
         },
       ]
 
-      // Mock the database response
       vi.mocked(db.selectFrom).mockReturnThis()
       vi.mocked(db.select).mockReturnThis()
       vi.mocked(db.orderBy).mockReturnThis()
@@ -108,7 +105,6 @@ describe('Document Routes', () => {
         },
       ]
 
-      // Mock the database response
       vi.mocked(db.selectFrom).mockReturnThis()
       vi.mocked(db.select).mockReturnThis()
       vi.mocked(db.where).mockReturnThis()

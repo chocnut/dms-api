@@ -5,23 +5,9 @@ import { FolderResponse, SingleFolderResponse, CreateFolderRequest } from '../ty
 const router = Router()
 
 /**
- * @swagger
- * /folders:
- *   get:
- *     summary: Get all folders
- *     description: Retrieve a list of all folders, optionally filtered by parent_id
- *     tags: [Folders]
- *     parameters:
- *       - in: query
- *         name: parent_id
- *         schema:
- *           type: integer
- *         description: Filter folders by parent folder ID
- *     responses:
- *       200:
- *         $ref: '#/components/responses/FolderResponse'
- *       500:
- *         $ref: '#/components/responses/ErrorResponse'
+ * @route GET /api/folders
+ * @description Get all folders
+ * @access Public
  */
 router.get('/', async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -54,7 +40,6 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
  * /folders:
  *   post:
  *     summary: Create a new folder
- *     description: Create a new folder in the system
  *     tags: [Folders]
  *     requestBody:
  *       required: true
@@ -68,14 +53,10 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
  *             properties:
  *               name:
  *                 type: string
- *                 description: Folder name
  *               parent_id:
  *                 type: integer
- *                 nullable: true
- *                 description: ID of the parent folder
  *               created_by:
  *                 type: string
- *                 description: User who created the folder
  *     responses:
  *       201:
  *         $ref: '#/components/responses/SingleFolderResponse'
@@ -84,36 +65,39 @@ router.get('/', async (req: Request, res: Response, next: NextFunction) => {
  *       500:
  *         $ref: '#/components/responses/ErrorResponse'
  */
-router.post('/', async (req: Request, res: Response, next: NextFunction) => {
-  try {
-    const { name, parent_id, created_by } = req.body as CreateFolderRequest
+router.post('/', (req: Request, res: Response, next: NextFunction) => {
+  void (async () => {
+    try {
+      const { name, parent_id, created_by } = req.body as CreateFolderRequest
 
-    const folder = await db
-      .insertInto('folders')
-      .values({
-        name,
-        parent_id: parent_id || null,
-        created_by,
-      })
-      .returning(['id', 'name', 'parent_id', 'created_by', 'created_at'])
-      .executeTakeFirst()
+      const folder = await db
+        .insertInto('folders')
+        .values({
+          name,
+          parent_id: parent_id || null,
+          created_by,
+        })
+        .returning(['id', 'name', 'parent_id', 'created_by', 'created_at'])
+        .executeTakeFirst()
 
-    if (!folder) {
-      return res.status(400).json({
-        status: 'error',
-        message: 'Failed to create folder',
-      })
+      if (!folder) {
+        res.status(400).json({
+          status: 'error',
+          message: 'Failed to create folder',
+        })
+        return
+      }
+
+      const response: SingleFolderResponse = {
+        status: 'success',
+        data: folder,
+      }
+
+      res.status(201).json(response)
+    } catch (error) {
+      next(error)
     }
-
-    const response: SingleFolderResponse = {
-      status: 'success',
-      data: folder,
-    }
-
-    res.status(201).json(response)
-  } catch (error) {
-    next(error)
-  }
+  })()
 })
 
 export default router
