@@ -152,7 +152,7 @@ router.post(
       const validatedBody = await documentSchema.parseAsync(req.body)
       const { name, type, size, folder_id, created_by } = validatedBody
 
-      const document = await db
+      const result = await db
         .insertInto('documents')
         .values({
           name,
@@ -161,10 +161,11 @@ router.post(
           folder_id: folder_id || null,
           created_by,
         })
-        .returning(['id', 'name', 'type', 'size', 'folder_id', 'created_by', 'created_at'])
-        .executeTakeFirst()
+        .execute()
 
-      if (!document) {
+      const insertId = Number(result[0].insertId)
+
+      if (!insertId) {
         res.status(400).json({
           status: 'error',
           message: 'Failed to create document',
@@ -172,9 +173,23 @@ router.post(
         return
       }
 
+      const newDocument = await db
+        .selectFrom('documents')
+        .select(['id', 'name', 'type', 'size', 'folder_id', 'created_by', 'created_at'])
+        .where('id', '=', insertId)
+        .executeTakeFirst()
+
+      if (!newDocument) {
+        res.status(500).json({
+          status: 'error',
+          message: 'Document created but failed to retrieve',
+        })
+        return
+      }
+
       const response: SingleDocumentResponse = {
         status: 'success',
-        data: document,
+        data: newDocument,
       }
 
       res.status(201).json(response)

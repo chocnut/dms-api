@@ -105,9 +105,9 @@ router.get(
       .select([
         'id',
         'name',
-        sql<FileType>`type`.as('type'),
+        sql<FileType>`'document'`.as('type'),
         'size',
-        'folder_id as parent_id',
+        'folder_id',
         'created_by',
         'created_at',
       ])
@@ -116,12 +116,8 @@ router.get(
       foldersQuery = foldersQuery.where('parent_id', '=', parent_id)
       documentsQuery = documentsQuery.where('folder_id', '=', parent_id)
     } else {
-      foldersQuery = foldersQuery.where(eb =>
-        eb.or([eb('parent_id', 'is', null), eb('parent_id', '=', 0)])
-      )
-      documentsQuery = documentsQuery.where(eb =>
-        eb.or([eb('folder_id', 'is', null), eb('folder_id', '=', 0)])
-      )
+      foldersQuery = foldersQuery.where('parent_id', 'is', null)
+      documentsQuery = documentsQuery.where('folder_id', 'is', null)
     }
 
     if (search) {
@@ -150,7 +146,7 @@ router.get(
       name: String(doc.name),
       type: doc.type,
       size: Number(doc.size),
-      folder_id: doc.parent_id === null ? null : Number(doc.parent_id),
+      folder_id: doc.folder_id === null ? null : Number(doc.folder_id),
       created_by: String(doc.created_by),
       created_at: new Date(doc.created_at),
     }))
