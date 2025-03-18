@@ -39,7 +39,7 @@ const generateRandomDocument = () => {
   return {
     name: `${baseName}_${randomNumber}.${extension}`,
     type,
-    size: Math.floor(Math.random() * (10485760 - 1024 + 1)) + 1024, // Between 1KB and 10MB
+    size: Math.floor(Math.random() * (10485760 - 1024 + 1)) + 1024,
     created_by: 'John Green',
     created_at: new Date(),
     folder_id: Math.random() > 0.5 ? Math.floor(Math.random() * 5) + 1 : null,

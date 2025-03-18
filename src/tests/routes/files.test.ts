@@ -4,7 +4,6 @@ import express from 'express'
 import fileRoutes from '../../routes/files'
 import { db } from '../../lib/db/config'
 
-// Mock the database with properly typed methods
 vi.mock('../../lib/db/config', () => {
   const mockDb = {
     selectFrom: vi.fn().mockReturnThis(),
@@ -64,15 +63,13 @@ describe('File Routes', () => {
       vi.mocked(db.select).mockReturnThis()
       vi.mocked(db.where).mockReturnThis()
       vi.mocked(db.orderBy).mockReturnThis()
-      vi.mocked(db.execute)
-        .mockResolvedValueOnce(mockFolders) // First call returns folders
-        .mockResolvedValueOnce(mockDocuments) // Second call returns documents
+      vi.mocked(db.execute).mockResolvedValueOnce(mockFolders).mockResolvedValueOnce(mockDocuments)
 
       const response = await request(app).get('/api/files')
 
       expect(response.status).toBe(200)
       expect(response.body.status).toBe('success')
-      expect(response.body.data).toHaveLength(2) // Combined length of folders and documents
+      expect(response.body.data).toHaveLength(2)
       expect(response.body.pagination).toEqual({
         total: 2,
         page: 1,
@@ -126,7 +123,6 @@ describe('File Routes', () => {
     })
 
     it('should apply pagination parameters', async () => {
-      // Create enough mock data to test pagination
       const mockFolders = Array(10)
         .fill(null)
         .map((_, i) => ({
@@ -205,7 +201,6 @@ describe('File Routes', () => {
       expect(response.body.status).toBe('success')
       expect(response.body.data).toHaveLength(2)
 
-      // Verify search was applied
       expect(db.where).toHaveBeenCalledWith('name', 'like', '%Test%')
     })
   })
