@@ -105,7 +105,7 @@ router.get(
  * /folders:
  *   post:
  *     summary: Create a new folder
- *     description: Create a new folder in the system
+ *     description: Create a new folder with the provided name
  *     tags: [Folders]
  *     requestBody:
  *       required: true
@@ -144,27 +144,27 @@ router.post(
       const validatedBody = await folderSchema.parseAsync(req.body)
       const { name, parent_id, created_by } = validatedBody
 
-      const folder = await db
+      const result = await db
         .insertInto('folders')
         .values({
           name,
           parent_id: parent_id || null,
           created_by,
+          created_at: new Date(),
         })
-        .returning(['id', 'name', 'parent_id', 'created_by', 'created_at'])
-        .executeTakeFirst()
+        .execute()
 
-      if (!folder) {
-        res.status(400).json({
-          status: 'error',
-          message: 'Failed to create folder',
-        })
-        return
-      }
+      const insertId = Number(result[0].insertId)
+
+      const insertedFolder = await db
+        .selectFrom('folders')
+        .selectAll()
+        .where('id', '=', insertId)
+        .executeTakeFirstOrThrow()
 
       const response: SingleFolderResponse = {
         status: 'success',
-        data: folder,
+        data: insertedFolder,
       }
 
       res.status(201).json(response)
