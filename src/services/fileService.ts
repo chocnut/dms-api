@@ -20,16 +20,19 @@ export interface FileService {
   createFile: (data: CreateFileDTO) => Promise<File | null>
   updateFile: (id: number, data: Partial<CreateFileDTO>) => Promise<File | null>
   deleteFile: (id: number) => Promise<File | null>
-  bulkDeleteFiles: (ids: number[]) => Promise<File[]>
-  moveFiles: (ids: number[], folderId: number | null) => Promise<File[]>
-  getFileStats: () => Promise<FileStats>
 }
 
+let fileServiceInstance: FileService | null = null
+
 export const createFileService = (db: Kysely<Database>): FileService => {
+  if (fileServiceInstance) {
+    return fileServiceInstance
+  }
+
   const fileRepository = createFileRepository(db)
   const folderRepository = createFolderRepository(db)
 
-  return {
+  fileServiceInstance = {
     async getAllFiles(filters?: FileFilters) {
       return await fileRepository.findAll(filters)
     },
@@ -60,7 +63,6 @@ export const createFileService = (db: Kysely<Database>): FileService => {
       }
 
       if (data.size !== undefined && data.size < 0) return null
-
       if (data.name !== undefined && !data.name.trim()) return null
 
       return await fileRepository.update(id, data)
@@ -69,36 +71,14 @@ export const createFileService = (db: Kysely<Database>): FileService => {
     async deleteFile(id: number) {
       return await fileRepository.remove(id)
     },
-
-    async bulkDeleteFiles(ids: number[]) {
-      return await fileRepository.bulkRemove(ids)
-    },
-
-    async moveFiles(ids: number[], folderId: number | null) {
-      if (folderId !== null) {
-        const folder = await folderRepository.findById(folderId)
-        if (!folder) return []
-      }
-
-      return await fileRepository.moveToFolder(ids, folderId)
-    },
-
-    async getFileStats(): Promise<FileStats> {
-      const [typeDistribution, totalSize] = await Promise.all([
-        fileRepository.countByType(),
-        fileRepository.getTotalSize(),
-      ])
-
-      return {
-        totalFiles: typeDistribution.reduce((sum, { count }) => sum + Number(count), 0),
-        totalSize,
-        typeDistribution: typeDistribution.map(({ type, count }) => ({
-          type,
-          count: Number(count),
-        })),
-      }
-    },
   }
+
+  return fileServiceInstance
+}
+
+// For testing purposes
+export const resetFileService = () => {
+  fileServiceInstance = null
 }
 
 export default createFileService

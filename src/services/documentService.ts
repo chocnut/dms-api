@@ -14,10 +14,16 @@ export interface DocumentService {
   deleteDocument: (id: number) => Promise<Document | null>
 }
 
+let documentServiceInstance: DocumentService | null = null
+
 export const createDocumentService = (db: Kysely<Database>): DocumentService => {
+  if (documentServiceInstance) {
+    return documentServiceInstance
+  }
+
   const documentRepository = createDocumentRepository(db)
 
-  return {
+  documentServiceInstance = {
     async getAllDocuments(folderId?: number | null) {
       return await documentRepository.findAll(folderId)
     },
@@ -41,4 +47,13 @@ export const createDocumentService = (db: Kysely<Database>): DocumentService => 
       return await documentRepository.remove(id)
     },
   }
+
+  return documentServiceInstance
 }
+
+// For testing purposes
+export const resetDocumentService = () => {
+  documentServiceInstance = null
+}
+
+export default createDocumentService

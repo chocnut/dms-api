@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { createDocumentService } from '../../services/documentService'
+import { createDocumentService, resetDocumentService } from '../../services/documentService'
 import { Document, CreateDocumentDTO } from '../../repositories/documentRepository'
 import { Kysely } from 'kysely'
 import { Database } from '../../lib/db/schema'
@@ -30,6 +30,7 @@ describe('DocumentService', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    resetDocumentService()
   })
 
   const documentService = createDocumentService(mockDb)

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { createFolderService } from '../../services/folderService'
+import { createFolderService, resetFolderService } from '../../services/folderService'
 import { Folder, CreateFolderDTO } from '../../repositories/folderRepository'
 import { Kysely } from 'kysely'
 import { Database } from '../../lib/db/schema'
@@ -29,6 +29,7 @@ describe('FolderService', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    resetFolderService()
   })
 
   const folderService = createFolderService(mockDb)

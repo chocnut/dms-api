@@ -11,10 +11,16 @@ export interface FolderService {
   getFolderPath: (id: number) => Promise<Folder[]>
 }
 
+let folderServiceInstance: FolderService | null = null
+
 export const createFolderService = (db: Kysely<Database>): FolderService => {
+  if (folderServiceInstance) {
+    return folderServiceInstance
+  }
+
   const folderRepository = createFolderRepository(db)
 
-  return {
+  folderServiceInstance = {
     async getAllFolders(parentId?: number | null) {
       return await folderRepository.findAll(parentId)
     },
@@ -57,4 +63,13 @@ export const createFolderService = (db: Kysely<Database>): FolderService => {
       return await folderRepository.getPath(id)
     },
   }
+
+  return folderServiceInstance
 }
+
+// For testing purposes
+export const resetFolderService = () => {
+  folderServiceInstance = null
+}
+
+export default createFolderService

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { createFileService } from '../../services/fileService'
+import { createFileService, resetFileService } from '../../services/fileService'
 import { File, CreateFileDTO } from '../../repositories/fileRepository'
 import { Kysely } from 'kysely'
 import { Database } from '../../lib/db/schema'
@@ -11,10 +11,6 @@ const mockFileRepository = {
   create: vi.fn(),
   update: vi.fn(),
   remove: vi.fn(),
-  bulkRemove: vi.fn(),
-  moveToFolder: vi.fn(),
-  countByType: vi.fn(),
-  getTotalSize: vi.fn(),
 }
 
 const mockFolderRepository = {
@@ -43,6 +39,7 @@ describe('FileService', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    resetFileService()
   })
 
   const fileService = createFileService(mockDb)
@@ -174,64 +171,6 @@ describe('FileService', () => {
 
       expect(result).toEqual(mockFile)
       expect(mockFileRepository.remove).toHaveBeenCalledWith(1)
-    })
-  })
-
-  describe('bulkDeleteFiles', () => {
-    it('should delete multiple files', async () => {
-      const files = [mockFile, { ...mockFile, id: 2 }]
-      mockFileRepository.bulkRemove.mockResolvedValue(files)
-
-      const result = await fileService.bulkDeleteFiles([1, 2])
-
-      expect(result).toEqual(files)
-      expect(mockFileRepository.bulkRemove).toHaveBeenCalledWith([1, 2])
-    })
-  })
-
-  describe('moveFiles', () => {
-    it('should move files to a new folder', async () => {
-      const files = [mockFile, { ...mockFile, id: 2 }]
-      mockFolderRepository.findById.mockResolvedValue({ id: 3 })
-      mockFileRepository.moveToFolder.mockResolvedValue(files.map(f => ({ ...f, folder_id: 3 })))
-
-      const result = await fileService.moveFiles([1, 2], 3)
-
-      expect(result).toEqual(files.map(f => ({ ...f, folder_id: 3 })))
-      expect(mockFileRepository.moveToFolder).toHaveBeenCalledWith([1, 2], 3)
-    })
-
-    it('should validate target folder exists', async () => {
-      mockFolderRepository.findById.mockResolvedValue(null)
-
-      const result = await fileService.moveFiles([1, 2], 999)
-
-      expect(result).toEqual([])
-      expect(mockFileRepository.moveToFolder).not.toHaveBeenCalled()
-    })
-  })
-
-  describe('getFileStats', () => {
-    it('should return file statistics', async () => {
-      const typeDistribution = [
-        { type: 'text/plain', count: '2' },
-        { type: 'application/pdf', count: '3' },
-      ]
-      const totalSize = 5120
-
-      mockFileRepository.countByType.mockResolvedValue(typeDistribution)
-      mockFileRepository.getTotalSize.mockResolvedValue(totalSize)
-
-      const result = await fileService.getFileStats()
-
-      expect(result).toEqual({
-        totalFiles: 5,
-        totalSize: 5120,
-        typeDistribution: [
-          { type: 'text/plain', count: 2 },
-          { type: 'application/pdf', count: 3 },
-        ],
-      })
     })
   })
 })
