@@ -1,6 +1,6 @@
 # Document Management System API
 
-![Backend Tests](https://github.com/chocnut/v/actions/workflows/test.yml/badge.svg)
+![Test Status](https://github.com/chocnut/dms-api/actions/workflows/test.yml/badge.svg)
 
 A RESTful API for managing documents and folders in a document management system.
 
