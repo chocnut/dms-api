@@ -1,51 +1,24 @@
-import { Router, Request, Response } from 'express'
+import { Router } from 'express'
 import { db } from '../lib/db/config'
+import { createDocumentService } from '../services/documentService'
 import { asyncHandler } from '../utils/routeHandler'
 import { z } from 'zod'
 
 const router = Router()
+const documentService = createDocumentService(db)
 
-const documentTypes = [
-  'application/pdf',
-  'application/msword',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  'image/jpeg',
-  'image/png',
-  'application/vnd.ms-excel',
-  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-  'text/plain',
-]
+const createDocumentSchema = z.object({
+  name: z.string(),
+  type: z.string(),
+  size: z.number(),
+  folder_id: z.number().nullable(),
+  created_by: z.string(),
+})
 
-const fileNames = [
-  'report',
-  'document',
-  'presentation',
-  'spreadsheet',
-  'image',
-  'contract',
-  'invoice',
-  'proposal',
-]
-
-const getRandomElement = <T>(array: T[]): T => {
-  return array[Math.floor(Math.random() * array.length)]
-}
-
-const generateRandomDocument = (folder_id?: number | null) => {
-  const type = getRandomElement(documentTypes)
-  const extension = type.split('/')[1]
-  const baseName = getRandomElement(fileNames)
-  const randomNumber = Math.floor(Math.random() * 1000)
-
-  return {
-    name: `${baseName}_${randomNumber}.${extension}`,
-    type,
-    size: Math.floor(Math.random() * (10485760 - 1024 + 1)) + 1024,
-    created_by: 'John Green',
-    created_at: new Date(),
-    folder_id: folder_id ?? null,
-  }
-}
+const updateDocumentSchema = z.object({
+  name: z.string().optional(),
+  folder_id: z.number().nullable().optional(),
+})
 
 /**
  * @swagger
@@ -83,21 +56,21 @@ const generateRandomDocument = (folder_id?: number | null) => {
  */
 router.get(
   '/',
-  asyncHandler(async (req: Request, res: Response): Promise<void> => {
-    const { folder_id } = req.query
+  asyncHandler(async (req, res) => {
+    const folderId = req.query.folder_id ? Number(req.query.folder_id) : undefined
+    const documents = await documentService.getAllDocuments(folderId)
+    res.json({ status: 'success', data: documents })
+  })
+)
 
-    let query = db.selectFrom('documents').selectAll()
-
-    if (folder_id !== undefined) {
-      query = query.where('folder_id', '=', Number(folder_id))
+router.get(
+  '/:id',
+  asyncHandler(async (req, res) => {
+    const document = await documentService.getDocumentById(Number(req.params.id))
+    if (!document) {
+      return res.status(404).json({ status: 'error', message: 'Document not found' })
     }
-
-    const documents = await query.execute()
-
-    res.json({
-      status: 'success',
-      data: documents,
-    })
+    res.json({ status: 'success', data: document })
   })
 )
 
@@ -123,30 +96,36 @@ router.get(
  */
 router.post(
   '/',
-  asyncHandler(async (req: Request, res: Response): Promise<void> => {
-    const documentSchema = z.object({
-      folder_id: z.number().nullable().optional(),
-    })
+  asyncHandler(async (req, res) => {
+    const validatedData = await createDocumentSchema.parseAsync(req.body)
+    const document = await documentService.createDocument(validatedData)
+    if (!document) {
+      return res.status(400).json({ status: 'error', message: 'Failed to create document' })
+    }
+    res.status(201).json({ status: 'success', data: document })
+  })
+)
 
-    const validatedBody = await documentSchema.parseAsync(req.body)
-    const { folder_id } = validatedBody
+router.put(
+  '/:id',
+  asyncHandler(async (req, res) => {
+    const validatedData = await updateDocumentSchema.parseAsync(req.body)
+    const document = await documentService.updateDocument(Number(req.params.id), validatedData)
+    if (!document) {
+      return res.status(404).json({ status: 'error', message: 'Document not found' })
+    }
+    res.json({ status: 'success', data: document })
+  })
+)
 
-    const randomDocument = generateRandomDocument(folder_id)
-
-    const result = await db.insertInto('documents').values(randomDocument).execute()
-
-    const insertId = Number(result[0].insertId)
-
-    const document = await db
-      .selectFrom('documents')
-      .selectAll()
-      .where('id', '=', insertId)
-      .executeTakeFirstOrThrow()
-
-    res.status(201).json({
-      status: 'success',
-      data: document,
-    })
+router.delete(
+  '/:id',
+  asyncHandler(async (req, res) => {
+    const document = await documentService.deleteDocument(Number(req.params.id))
+    if (!document) {
+      return res.status(404).json({ status: 'error', message: 'Document not found' })
+    }
+    res.json({ status: 'success', data: document })
   })
 )
 

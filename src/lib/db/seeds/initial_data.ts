@@ -1,77 +1,35 @@
 import { Kysely } from 'kysely'
 import { Database } from '../schema'
 import { db as defaultDb } from '../config'
+import { CreateDocumentDTO } from '../../../repositories/documentRepository'
+import { InsertObject } from 'kysely'
 
-const documentTypes = [
-  'application/pdf',
-  'application/msword',
-  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  'image/jpeg',
-  'image/png',
-  'application/vnd.ms-excel',
-  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-  'text/plain',
-]
+const BATCH_SIZE = 100
 
-const fileNames = [
-  'report',
-  'document',
-  'presentation',
-  'spreadsheet',
-  'image',
-  'contract',
-  'invoice',
-  'proposal',
-  'meeting_notes',
-  'budget',
-  'analysis',
-  'summary',
-  'plan',
-  'review',
-  'checklist',
-]
+const documentTypes = ['application/pdf', 'application/msword', 'image/jpeg', 'image/png']
 
-const folderNames = [
-  'Marketing',
-  'Finance',
-  'HR',
-  'Projects',
-  'Legal',
-  'Sales',
-  'Research',
-  'Development',
-  'Operations',
-  'Client Files',
-  'IT',
-  'Administration',
-  'Executive',
-  'Training',
-  'Quality Assurance',
-]
+const fileNames = ['document', 'spreadsheet', 'image', 'invoice']
 
-const subfolderNames = [
-  'Archive',
-  'Templates',
-  'Reports',
-  'Meetings',
-  'Drafts',
-  'Final',
-  'Resources',
-  'Documents',
-  'Shared',
-  'Confidential',
-  'Team',
-  'Planning',
-  'Reviews',
-  'Backups',
-  'External',
-]
+const folderNames = ['Marketing', 'Finance', 'HR', 'Projects']
+
+const subfolderNames = ['Archive', 'Templates', 'Reports', 'Meetings']
 
 const getRandomElement = <T>(array: T[]): T => {
   return array[Math.floor(Math.random() * array.length)]
 }
 
-const generateRandomDocument = (folderId: number | null = null) => {
+interface FolderData {
+  name: string
+  parent_id: number | null
+  created_by: string
+  created_at: Date
+}
+
+interface DocumentData extends CreateDocumentDTO {
+  created_at: Date
+}
+
+const generateRandomDocument = (folderId: number | null = null): DocumentData => {
   const type = getRandomElement(documentTypes)
   const extension = type.split('/')[1]
   const baseName = getRandomElement(fileNames)
@@ -84,87 +42,147 @@ const generateRandomDocument = (folderId: number | null = null) => {
     type,
     size: Math.floor(Math.random() * (10485760 - 1024 + 1)) + 1024,
     created_by: 'John Green',
-    created_at: date,
     folder_id: folderId,
+    created_at: date,
   }
 }
 
-const createFolder = async (db: Kysely<Database>, name: string, parentId: number | null = null) => {
-  const date = new Date()
-  date.setDate(date.getDate() - Math.floor(Math.random() * 365))
+const createFolders = async (
+  db: Kysely<Database>,
+  folders: Array<Omit<FolderData, 'created_by'>>
+) => {
+  if (folders.length === 0) return []
 
-  const [folder] = await db
+  const [result] = await db
     .insertInto('folders')
-    .values({
-      name,
-      parent_id: parentId,
-      created_by: 'John Green',
-      created_at: date,
-    })
-    .returning('id')
+    .values(
+      folders.map(f => ({
+        name: f.name,
+        parent_id: f.parent_id,
+        created_by: 'John Green',
+        created_at: f.created_at,
+      })) satisfies InsertObject<Database, 'folders'>[]
+    )
     .execute()
 
-  return folder.id
+  const startId = Number(result.insertId)
+  return Array.from({ length: folders.length }, (_, i) => startId + i)
+}
+
+const insertDocumentsBatch = async (db: Kysely<Database>, documents: DocumentData[]) => {
+  if (documents.length === 0) return
+
+  const batches = []
+  for (let i = 0; i < documents.length; i += BATCH_SIZE) {
+    batches.push(documents.slice(i, i + BATCH_SIZE))
+  }
+
+  for (const batch of batches) {
+    await db
+      .insertInto('documents')
+      .values(batch satisfies InsertObject<Database, 'documents'>[])
+      .execute()
+  }
 }
 
 const generateSubfolderStructure = async (
   db: Kysely<Database>,
-  parentId: number,
+  parentIds: number[],
   depth: number = 0,
   usedNames: Set<string> = new Set()
 ) => {
-  if (depth >= 3) return
+  if (depth >= 1 || parentIds.length === 0) return
 
-  const numSubfolders = Math.floor(Math.random() * 4) + 3
-  const numDocuments = Math.floor(Math.random() * 11) + 10
+  console.log(`Generating level ${depth + 1} subfolders for ${parentIds.length} parent folders...`)
+  const subfolders: Array<Omit<FolderData, 'created_by'>> = []
+  const documents: DocumentData[] = []
 
-  for (let i = 0; i < numSubfolders; i++) {
-    let subfolderName = getRandomElement(subfolderNames)
-    while (usedNames.has(subfolderName)) {
-      subfolderName = getRandomElement(subfolderNames)
+  for (const parentId of parentIds) {
+    const numSubfolders = 1
+    const numDocuments = 2
+
+    for (let i = 0; i < numSubfolders; i++) {
+      let subfolderName = getRandomElement(subfolderNames)
+      while (usedNames.has(subfolderName)) {
+        subfolderName = getRandomElement(subfolderNames)
+      }
+      usedNames.add(subfolderName)
+
+      const date = new Date()
+      date.setDate(date.getDate() - Math.floor(Math.random() * 365))
+      subfolders.push({ name: subfolderName, parent_id: parentId, created_at: date })
     }
-    usedNames.add(subfolderName)
-
-    const folderId = await createFolder(db, subfolderName, parentId)
 
     for (let j = 0; j < numDocuments; j++) {
-      await db.insertInto('documents').values(generateRandomDocument(folderId)).execute()
+      documents.push(generateRandomDocument(parentId))
     }
+  }
 
-    if (Math.random() < 0.7) {
-      await generateSubfolderStructure(db, folderId, depth + 1, new Set(usedNames))
+  if (subfolders.length > 0) {
+    console.log(`Creating ${subfolders.length} subfolders at level ${depth + 1}...`)
+    await createFolders(db, subfolders)
+
+    if (documents.length > 0) {
+      console.log(`Creating ${documents.length} documents for level ${depth + 1} folders...`)
+      await insertDocumentsBatch(db, documents)
     }
   }
 }
 
 export async function seed(db: Kysely<Database> = defaultDb) {
+  console.log('Cleaning up existing data...')
   await db.deleteFrom('documents').execute()
   await db.deleteFrom('folders').execute()
 
+  console.log('Creating root folders...')
+  const rootFolders: Array<Omit<FolderData, 'created_by'>> = []
+  const rootDocuments: DocumentData[] = []
   const rootUsedNames = new Set<string>()
-  const numRootFolders = folderNames.length
-  const numRootDocuments = Math.floor(Math.random() * 11) + 25
+  const numRootDocuments = 5
 
-  for (let i = 0; i < numRootFolders; i++) {
+  for (let i = 0; i < folderNames.length; i++) {
     let folderName = getRandomElement(folderNames)
     while (rootUsedNames.has(folderName)) {
       folderName = getRandomElement(folderNames)
     }
     rootUsedNames.add(folderName)
 
-    const folderId = await createFolder(db, folderName)
+    const date = new Date()
+    date.setDate(date.getDate() - Math.floor(Math.random() * 365))
+    rootFolders.push({ name: folderName, parent_id: null, created_at: date })
 
-    const numDocuments = Math.floor(Math.random() * 11) + 15
+    const numDocuments = 2
     for (let j = 0; j < numDocuments; j++) {
-      await db.insertInto('documents').values(generateRandomDocument(folderId)).execute()
+      rootDocuments.push(generateRandomDocument(null))
     }
-
-    await generateSubfolderStructure(db, folderId)
   }
+
+  console.log(`Creating ${rootFolders.length} root folders...`)
+  const rootFolderIds = await createFolders(db, rootFolders)
+
+  console.log(`Creating ${rootDocuments.length} root documents...`)
+  const documentsWithFolders = rootDocuments.map((doc, index) => {
+    const folderId =
+      rootFolderIds[Math.floor(index / (rootDocuments.length / rootFolderIds.length || 1))]
+    return {
+      ...doc,
+      folder_id: folderId,
+    } as DocumentData
+  })
 
   for (let i = 0; i < numRootDocuments; i++) {
-    await db.insertInto('documents').values(generateRandomDocument(null)).execute()
+    documentsWithFolders.push(generateRandomDocument(null))
   }
+
+  if (documentsWithFolders.length > 0) {
+    console.log(`Inserting ${documentsWithFolders.length} root documents...`)
+    await insertDocumentsBatch(db, documentsWithFolders)
+  }
+
+  console.log('Generating subfolder structure...')
+  await generateSubfolderStructure(db, rootFolderIds)
+
+  console.log('Seeding completed successfully!')
 }
 
 export async function down(db: Kysely<Database>) {

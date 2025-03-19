@@ -1,10 +1,22 @@
 import { Router, Request, Response } from 'express'
 import { db } from '../lib/db/config'
-import { SingleFolderResponse } from '../types/folder'
-import { z } from 'zod'
+import { createFolderService } from '../services/folderService'
 import { asyncHandler } from '../utils/routeHandler'
+import { z } from 'zod'
 
 const router = Router()
+const folderService = createFolderService(db)
+
+const createFolderSchema = z.object({
+  name: z.string().min(1).max(255),
+  parent_id: z.number().nullable().optional(),
+  created_by: z.string().min(1).max(100),
+})
+
+const updateFolderSchema = z.object({
+  name: z.string().min(1).max(255).optional(),
+  parent_id: z.number().nullable().optional(),
+})
 
 /**
  * @swagger
@@ -27,21 +39,10 @@ const router = Router()
  */
 router.get(
   '/',
-  asyncHandler(async (req: Request, res: Response): Promise<void> => {
-    const { parent_id } = req.query
-
-    let query = db.selectFrom('folders').selectAll()
-
-    if (parent_id !== undefined) {
-      query = query.where('parent_id', '=', Number(parent_id))
-    }
-
-    const folders = await query.execute()
-
-    res.json({
-      status: 'success',
-      data: folders,
-    })
+  asyncHandler(async (req: Request, res: Response) => {
+    const parentId = req.query.parent_id ? Number(req.query.parent_id) : undefined
+    const folders = await folderService.getAllFolders(parentId)
+    res.json({ status: 'success', data: folders })
   })
 )
 
@@ -69,14 +70,9 @@ router.get(
  */
 router.get(
   '/:id',
-  asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  asyncHandler(async (req: Request, res: Response) => {
     const id = Number(req.params.id)
-
-    const folder = await db
-      .selectFrom('folders')
-      .selectAll()
-      .where('id', '=', id)
-      .executeTakeFirst()
+    const folder = await folderService.getFolderById(id)
 
     if (!folder) {
       res.status(404).json({
@@ -86,12 +82,53 @@ router.get(
       return
     }
 
-    const response: SingleFolderResponse = {
+    res.json({
       status: 'success',
       data: folder,
+    })
+  })
+)
+
+/**
+ * @swagger
+ * /folders/{id}/path:
+ *   get:
+ *     summary: Get folder path
+ *     description: Retrieve the path from root to the specified folder
+ *     tags: [Folders]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: integer
+ *         required: true
+ *         description: Folder ID
+ *     responses:
+ *       200:
+ *         $ref: '#/components/responses/FolderResponse'
+ *       404:
+ *         $ref: '#/components/responses/ErrorResponse'
+ *       500:
+ *         $ref: '#/components/responses/ErrorResponse'
+ */
+router.get(
+  '/:id/path',
+  asyncHandler(async (req: Request, res: Response) => {
+    const id = Number(req.params.id)
+    const path = await folderService.getFolderPath(id)
+
+    if (path.length === 0) {
+      res.status(404).json({
+        status: 'error',
+        message: 'Folder not found',
+      })
+      return
     }
 
-    res.json(response)
+    res.json({
+      status: 'success',
+      data: path,
+    })
   })
 )
 
@@ -128,38 +165,41 @@ router.get(
  */
 router.post(
   '/',
-  asyncHandler(async (req: Request, res: Response): Promise<void> => {
-    const folderSchema = z.object({
-      name: z.string().min(1).max(255),
-      parent_id: z.number().nullable().optional(),
-      created_by: z.string().min(1).max(100),
-    })
+  asyncHandler(async (req: Request, res: Response) => {
+    try {
+      const validatedData = await createFolderSchema.parseAsync(req.body)
+      const folderData = {
+        ...validatedData,
+        parent_id: validatedData.parent_id ?? null,
+      }
+      const folder = await folderService.createFolder(folderData)
 
-    const validatedBody = await folderSchema.parseAsync(req.body)
-    const { name, parent_id, created_by } = validatedBody
+      if (!folder) {
+        res.status(400).json({
+          status: 'error',
+          message: 'Invalid folder data or parent folder not found',
+        })
+        return
+      }
 
-    const result = await db
-      .insertInto('folders')
-      .values({
-        name,
-        parent_id: parent_id || null,
-        created_by,
-        created_at: new Date(),
+      res.status(201).json({
+        status: 'success',
+        data: folder,
       })
-      .execute()
-
-    const insertId = Number(result[0].insertId)
-
-    const folder = await db
-      .selectFrom('folders')
-      .selectAll()
-      .where('id', '=', insertId)
-      .executeTakeFirstOrThrow()
-
-    res.status(201).json({
-      status: 'success',
-      data: folder,
-    })
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        res.status(400).json({
+          status: 'error',
+          message: 'Validation failed',
+          errors: error.errors.map(err => ({
+            path: err.path.join('.'),
+            message: err.message,
+          })),
+        })
+        return
+      }
+      throw error
+    }
   })
 )
 
@@ -200,18 +240,12 @@ router.post(
  */
 router.put(
   '/:id',
-  asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  asyncHandler(async (req: Request, res: Response) => {
     try {
       const id = Number(req.params.id)
+      const updateData = await updateFolderSchema.parseAsync(req.body)
 
-      const folderSchema = z.object({
-        name: z.string().min(1).max(255).optional(),
-        parent_id: z.number().nullable().optional(),
-      })
-
-      const validatedBody = await folderSchema.parseAsync(req.body)
-
-      if (Object.keys(validatedBody).length === 0) {
+      if (Object.keys(updateData).length === 0) {
         res.status(400).json({
           status: 'error',
           message: 'No valid fields to update',
@@ -219,28 +253,20 @@ router.put(
         return
       }
 
-      await db.updateTable('folders').set(validatedBody).where('id', '=', id).execute()
-
-      const folder = await db
-        .selectFrom('folders')
-        .selectAll()
-        .where('id', '=', id)
-        .executeTakeFirst()
+      const folder = await folderService.updateFolder(id, updateData)
 
       if (!folder) {
         res.status(404).json({
           status: 'error',
-          message: 'Folder not found',
+          message: 'Folder not found or invalid update data',
         })
         return
       }
 
-      const response: SingleFolderResponse = {
+      res.json({
         status: 'success',
         data: folder,
-      }
-
-      res.json(response)
+      })
     } catch (error) {
       if (error instanceof z.ZodError) {
         res.status(400).json({
@@ -282,14 +308,9 @@ router.put(
  */
 router.delete(
   '/:id',
-  asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  asyncHandler(async (req: Request, res: Response) => {
     const id = Number(req.params.id)
-
-    const folder = await db
-      .selectFrom('folders')
-      .selectAll()
-      .where('id', '=', id)
-      .executeTakeFirst()
+    const folder = await folderService.deleteFolder(id)
 
     if (!folder) {
       res.status(404).json({
@@ -298,8 +319,6 @@ router.delete(
       })
       return
     }
-
-    await db.deleteFrom('folders').where('id', '=', id).execute()
 
     res.json({
       status: 'success',
