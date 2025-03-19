@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express'
 import { db } from '../lib/db/config'
-import { FolderResponse, SingleFolderResponse } from '../types/folder'
+import { SingleFolderResponse } from '../types/folder'
 import { z } from 'zod'
 import { asyncHandler } from '../utils/routeHandler'
 
@@ -30,23 +30,18 @@ router.get(
   asyncHandler(async (req: Request, res: Response): Promise<void> => {
     const { parent_id } = req.query
 
-    let query = db
-      .selectFrom('folders')
-      .select(['id', 'name', 'parent_id', 'created_by', 'created_at'])
-      .orderBy('created_at', 'desc')
+    let query = db.selectFrom('folders').selectAll()
 
-    if (parent_id) {
+    if (parent_id !== undefined) {
       query = query.where('parent_id', '=', Number(parent_id))
     }
 
     const folders = await query.execute()
 
-    const response: FolderResponse = {
+    res.json({
       status: 'success',
       data: folders,
-    }
-
-    res.json(response)
+    })
   })
 )
 
@@ -79,7 +74,7 @@ router.get(
 
     const folder = await db
       .selectFrom('folders')
-      .select(['id', 'name', 'parent_id', 'created_by', 'created_at'])
+      .selectAll()
       .where('id', '=', id)
       .executeTakeFirst()
 
@@ -134,54 +129,37 @@ router.get(
 router.post(
   '/',
   asyncHandler(async (req: Request, res: Response): Promise<void> => {
-    try {
-      const folderSchema = z.object({
-        name: z.string().min(1).max(255),
-        parent_id: z.number().nullable().optional(),
-        created_by: z.string().min(1).max(100),
+    const folderSchema = z.object({
+      name: z.string().min(1).max(255),
+      parent_id: z.number().nullable().optional(),
+      created_by: z.string().min(1).max(100),
+    })
+
+    const validatedBody = await folderSchema.parseAsync(req.body)
+    const { name, parent_id, created_by } = validatedBody
+
+    const result = await db
+      .insertInto('folders')
+      .values({
+        name,
+        parent_id: parent_id || null,
+        created_by,
+        created_at: new Date(),
       })
+      .execute()
 
-      const validatedBody = await folderSchema.parseAsync(req.body)
-      const { name, parent_id, created_by } = validatedBody
+    const insertId = Number(result[0].insertId)
 
-      const result = await db
-        .insertInto('folders')
-        .values({
-          name,
-          parent_id: parent_id || null,
-          created_by,
-          created_at: new Date(),
-        })
-        .execute()
+    const folder = await db
+      .selectFrom('folders')
+      .selectAll()
+      .where('id', '=', insertId)
+      .executeTakeFirstOrThrow()
 
-      const insertId = Number(result[0].insertId)
-
-      const insertedFolder = await db
-        .selectFrom('folders')
-        .selectAll()
-        .where('id', '=', insertId)
-        .executeTakeFirstOrThrow()
-
-      const response: SingleFolderResponse = {
-        status: 'success',
-        data: insertedFolder,
-      }
-
-      res.status(201).json(response)
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        res.status(400).json({
-          status: 'error',
-          message: 'Validation failed',
-          errors: error.errors.map(err => ({
-            path: err.path.join('.'),
-            message: err.message,
-          })),
-        })
-        return
-      }
-      throw error
-    }
+    res.status(201).json({
+      status: 'success',
+      data: folder,
+    })
   })
 )
 
@@ -241,11 +219,12 @@ router.put(
         return
       }
 
+      await db.updateTable('folders').set(validatedBody).where('id', '=', id).execute()
+
       const folder = await db
-        .updateTable('folders')
-        .set(validatedBody)
+        .selectFrom('folders')
+        .selectAll()
         .where('id', '=', id)
-        .returning(['id', 'name', 'parent_id', 'created_by', 'created_at'])
         .executeTakeFirst()
 
       if (!folder) {
@@ -307,9 +286,9 @@ router.delete(
     const id = Number(req.params.id)
 
     const folder = await db
-      .deleteFrom('folders')
+      .selectFrom('folders')
+      .selectAll()
       .where('id', '=', id)
-      .returning(['id', 'name', 'parent_id', 'created_by', 'created_at'])
       .executeTakeFirst()
 
     if (!folder) {
@@ -320,12 +299,12 @@ router.delete(
       return
     }
 
-    const response: SingleFolderResponse = {
+    await db.deleteFrom('folders').where('id', '=', id).execute()
+
+    res.json({
       status: 'success',
       data: folder,
-    }
-
-    res.json(response)
+    })
   })
 )
 

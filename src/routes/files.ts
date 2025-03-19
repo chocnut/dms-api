@@ -16,10 +16,10 @@ const router = Router()
  *     tags: [Files]
  *     parameters:
  *       - in: query
- *         name: parent_id
+ *         name: folder_id
  *         schema:
  *           type: integer
- *         description: Filter by parent folder ID
+ *         description: Filter by folder ID
  *       - in: query
  *         name: page
  *         schema:
@@ -65,7 +65,7 @@ router.get(
   '/',
   asyncHandler(async (req: Request, res: Response): Promise<void> => {
     const querySchema = z.object({
-      parent_id: z.coerce.number().optional(),
+      folder_id: z.coerce.number().optional(),
       page: z.coerce.number().positive().default(1),
       limit: z.coerce.number().positive().max(100).default(10),
       sort: z.enum(['name', 'type', 'size', 'created_at']).default('created_at'),
@@ -84,9 +84,7 @@ router.get(
       return
     }
 
-    const { parent_id, page, limit, sort, order, search } = result.data
-
-    const offset = (page - 1) * limit
+    const { folder_id, page, limit, sort, order, search } = result.data
 
     let foldersQuery = db
       .selectFrom('folders')
@@ -95,7 +93,7 @@ router.get(
         'name',
         sql<FileType>`${'folder'}`.as('type'),
         sql<number>`0`.as('size'),
-        'parent_id',
+        'parent_id as folder_id',
         'created_by',
         'created_at',
       ])
@@ -112,9 +110,9 @@ router.get(
         'created_at',
       ])
 
-    if (parent_id) {
-      foldersQuery = foldersQuery.where('parent_id', '=', parent_id)
-      documentsQuery = documentsQuery.where('folder_id', '=', parent_id)
+    if (folder_id !== undefined) {
+      foldersQuery = foldersQuery.where('parent_id', '=', folder_id)
+      documentsQuery = documentsQuery.where('folder_id', '=', folder_id)
     } else {
       foldersQuery = foldersQuery.where('parent_id', 'is', null)
       documentsQuery = documentsQuery.where('folder_id', 'is', null)
@@ -136,7 +134,7 @@ router.get(
       name: String(folder.name),
       type: folder.type,
       size: undefined,
-      folder_id: folder.parent_id === null ? null : Number(folder.parent_id),
+      folder_id: folder.folder_id === null ? null : Number(folder.folder_id),
       created_by: String(folder.created_by),
       created_at: new Date(folder.created_at),
     }))
@@ -177,7 +175,7 @@ router.get(
 
     const total = allFiles.length
     const totalPages = Math.ceil(total / limit)
-
+    const offset = (page - 1) * limit
     const paginatedFiles = allFiles.slice(offset, offset + limit)
 
     const response: FileResponse = {

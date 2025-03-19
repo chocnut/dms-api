@@ -10,27 +10,32 @@ import apiRoutes from './routes'
 const app = express()
 
 app.use(helmet())
-app.use(cors())
 app.use(compression())
+app.use(cors())
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
-app.use(responseCapture)
 app.use(logger)
+app.use(responseCapture)
+
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec))
+app.use('/api', apiRoutes)
 
 app.get('/health', (_req: Request, res: Response) => {
   res.json({ status: 'ok' })
 })
 
-if (process.env.NODE_ENV !== 'production') {
-  app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec))
-}
-
-app.use('/api', apiRoutes)
+app.use((_req: Request, res: Response) => {
+  res.status(404).json({
+    status: 'error',
+    message: 'Not Found',
+  })
+})
 
 app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
+  console.error(err)
   res.status(500).json({
-    error: 'Something went wrong!',
-    message: process.env.NODE_ENV === 'development' ? err.message : undefined,
+    status: 'error',
+    message: 'Internal Server Error',
   })
 })
 

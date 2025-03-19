@@ -1,4 +1,4 @@
-export type FileType = 'document' | 'folder'
+export type FileType = 'folder' | 'document'
 
 export interface File {
   id: number
@@ -8,16 +8,15 @@ export interface File {
   folder_id: number | null
   created_by: string
   created_at: Date
-  parent_id?: number | null
 }
 
 export interface FileResponse {
   status: 'success' | 'error'
   data: File[]
   pagination?: {
-    total: number
     page: number
     limit: number
+    total: number
     totalPages: number
   }
 }

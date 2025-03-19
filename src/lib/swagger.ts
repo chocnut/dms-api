@@ -11,7 +11,6 @@ const options: swaggerJsdoc.Options = {
     servers: [
       {
         url: '/api',
-        description: 'API server',
       },
     ],
     components: {
@@ -21,32 +20,25 @@ const options: swaggerJsdoc.Options = {
           properties: {
             id: {
               type: 'integer',
-              description: 'Document ID',
             },
             name: {
               type: 'string',
-              description: 'Document name',
             },
             type: {
               type: 'string',
-              description: 'Document type (e.g., pdf, docx)',
             },
             size: {
               type: 'integer',
-              description: 'Document size in bytes',
             },
             folder_id: {
               type: ['integer', 'null'],
-              description: 'ID of the folder containing this document, or null if at root',
             },
             created_by: {
               type: 'string',
-              description: 'User who created the document',
             },
             created_at: {
               type: 'string',
               format: 'date-time',
-              description: 'Creation timestamp',
             },
           },
         },
@@ -55,24 +47,19 @@ const options: swaggerJsdoc.Options = {
           properties: {
             id: {
               type: 'integer',
-              description: 'Folder ID',
             },
             name: {
               type: 'string',
-              description: 'Folder name',
             },
             parent_id: {
               type: ['integer', 'null'],
-              description: 'ID of the parent folder, or null if at root',
             },
             created_by: {
               type: 'string',
-              description: 'User who created the folder',
             },
             created_at: {
               type: 'string',
               format: 'date-time',
-              description: 'Creation timestamp',
             },
           },
         },
@@ -81,33 +68,43 @@ const options: swaggerJsdoc.Options = {
           properties: {
             id: {
               type: 'integer',
-              description: 'Item ID',
             },
             name: {
               type: 'string',
-              description: 'Item name',
             },
             type: {
               type: 'string',
               enum: ['folder', 'document'],
-              description: 'Item type',
             },
             size: {
               type: ['integer', 'null'],
-              description: 'File size in bytes (null for folders)',
             },
             folder_id: {
               type: ['integer', 'null'],
-              description: 'ID of the folder containing this item, or null if at root',
             },
             created_by: {
               type: 'string',
-              description: 'User who created the item',
             },
             created_at: {
               type: 'string',
               format: 'date-time',
-              description: 'Creation timestamp',
+            },
+          },
+        },
+        Pagination: {
+          type: 'object',
+          properties: {
+            page: {
+              type: 'integer',
+            },
+            limit: {
+              type: 'integer',
+            },
+            total: {
+              type: 'integer',
+            },
+            totalPages: {
+              type: 'integer',
             },
           },
         },
@@ -117,39 +114,21 @@ const options: swaggerJsdoc.Options = {
             status: {
               type: 'string',
               enum: ['error'],
-              description: 'Error status',
             },
             message: {
               type: 'string',
-              description: 'Error message',
             },
-          },
-        },
-        Pagination: {
-          type: 'object',
-          properties: {
-            total: {
-              type: 'integer',
-              description: 'Total number of items',
-            },
-            page: {
-              type: 'integer',
-              description: 'Current page number',
-            },
-            limit: {
-              type: 'integer',
-              description: 'Number of items per page',
-            },
-            totalPages: {
-              type: 'integer',
-              description: 'Total number of pages',
+            errors: {
+              type: 'array',
+              items: {
+                type: 'object',
+              },
             },
           },
         },
       },
       responses: {
         DocumentResponse: {
-          description: 'Document list response',
           content: {
             'application/json': {
               schema: {
@@ -171,7 +150,6 @@ const options: swaggerJsdoc.Options = {
           },
         },
         SingleDocumentResponse: {
-          description: 'Single document response',
           content: {
             'application/json': {
               schema: {
@@ -190,7 +168,6 @@ const options: swaggerJsdoc.Options = {
           },
         },
         FolderResponse: {
-          description: 'Folder list response',
           content: {
             'application/json': {
               schema: {
@@ -212,7 +189,6 @@ const options: swaggerJsdoc.Options = {
           },
         },
         SingleFolderResponse: {
-          description: 'Single folder response',
           content: {
             'application/json': {
               schema: {
@@ -231,7 +207,6 @@ const options: swaggerJsdoc.Options = {
           },
         },
         FileResponse: {
-          description: 'File list response with pagination',
           content: {
             'application/json': {
               schema: {
@@ -256,7 +231,6 @@ const options: swaggerJsdoc.Options = {
           },
         },
         ErrorResponse: {
-          description: 'Error response',
           content: {
             'application/json': {
               schema: {
