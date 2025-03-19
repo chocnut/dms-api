@@ -90,17 +90,6 @@ router.get(
 
       const { folder_id, page, limit, sort, order, search } = result.data
 
-      console.log('Query parameters:', {
-        folder_id,
-        folder_id_type: typeof folder_id,
-        folder_id_null: folder_id ?? null,
-        page,
-        limit,
-        sort,
-        order,
-        search,
-      })
-
       const [folders, documents] = await Promise.all([
         folderService.getAllFolders(folder_id === undefined ? undefined : folder_id),
         documentService.getAllDocuments(folder_id === undefined ? undefined : folder_id),
