@@ -59,7 +59,7 @@ router.get(
   asyncHandler(async (req, res) => {
     const folderId = req.query.folder_id ? Number(req.query.folder_id) : undefined
     const documents = await documentService.getAllDocuments(folderId)
-    res.json({ status: 'success', data: documents })
+    return res.json({ status: 'success', data: documents })
   })
 )
 
@@ -70,7 +70,7 @@ router.get(
     if (!document) {
       return res.status(404).json({ status: 'error', message: 'Document not found' })
     }
-    res.json({ status: 'success', data: document })
+    return res.json({ status: 'success', data: document })
   })
 )
 
@@ -102,7 +102,7 @@ router.post(
     if (!document) {
       return res.status(400).json({ status: 'error', message: 'Failed to create document' })
     }
-    res.status(201).json({ status: 'success', data: document })
+    return res.status(201).json({ status: 'success', data: document })
   })
 )
 
@@ -114,7 +114,7 @@ router.put(
     if (!document) {
       return res.status(404).json({ status: 'error', message: 'Document not found' })
     }
-    res.json({ status: 'success', data: document })
+    return res.json({ status: 'success', data: document })
   })
 )
 
@@ -125,7 +125,7 @@ router.delete(
     if (!document) {
       return res.status(404).json({ status: 'error', message: 'Document not found' })
     }
-    res.json({ status: 'success', data: document })
+    return res.json({ status: 'success', data: document })
   })
 )
 
