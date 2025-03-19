@@ -1,5 +1,7 @@
 # Document Management System API
 
+[![Tests](https://github.com/[username]/[repository]/actions/workflows/test.yml/badge.svg)](https://github.com/[username]/[repository]/actions/workflows/test.yml)
+
 A RESTful API for managing documents and folders in a document management system.
 
 ## Setup and Development
