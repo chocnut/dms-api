@@ -3,3 +3,13 @@ node_modules
 .gitignore
 *.md
 dist
+.env
+.env.*
+!.env.example
+.pnpm-store
+coverage
+.husky
+.vscode
+*.log
+__tests__
+swagger
