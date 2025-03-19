@@ -30,7 +30,7 @@ const getRandomElement = <T>(array: T[]): T => {
   return array[Math.floor(Math.random() * array.length)]
 }
 
-const generateRandomDocument = () => {
+const generateRandomDocument = (folder_id?: number | null) => {
   const type = getRandomElement(documentTypes)
   const extension = type.split('/')[1]
   const baseName = getRandomElement(fileNames)
@@ -42,7 +42,7 @@ const generateRandomDocument = () => {
     size: Math.floor(Math.random() * (10485760 - 1024 + 1)) + 1024,
     created_by: 'John Green',
     created_at: new Date(),
-    folder_id: Math.random() > 0.5 ? Math.floor(Math.random() * 5) + 1 : null,
+    folder_id: folder_id ?? (Math.random() > 0.5 ? Math.floor(Math.random() * 5) + 1 : null),
   }
 }
 
@@ -93,21 +93,29 @@ router.get(
  * /documents:
  *   post:
  *     summary: Create a new document
- *     description: Creates a new document with fake data
+ *     description: Creates a new document with random data, optionally in a specified folder
  *     tags: [Documents]
+ *     requestBody:
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               folder_id:
+ *                 type: integer
+ *                 description: Optional folder ID to place the document in
  *     responses:
  *       201:
- *         description: Document created successfully
+ *         $ref: '#/components/responses/SingleDocumentResponse'
  */
 router.post(
   '/',
-  asyncHandler(async (_req: Request, res: Response) => {
-    const document = generateRandomDocument()
+  asyncHandler(async (req: Request, res: Response) => {
+    const { folder_id } = req.body
+    const document = generateRandomDocument(folder_id ? Number(folder_id) : null)
 
     const result = await db.insertInto('documents').values(document).execute()
-
     const insertId = Number(result[0].insertId)
-
     const insertedDocument = await db
       .selectFrom('documents')
       .selectAll()
