@@ -2,9 +2,7 @@ name: Tests
 
 on:
   push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
   test:
@@ -68,4 +66,5 @@ jobs:
           DB_NAME: dms_test
 
       - name: Run type check
-        run: pnpm typecheck 
+        run: pnpm typecheck
+
