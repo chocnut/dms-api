@@ -8,7 +8,6 @@ export interface FolderService {
   createFolder: (data: CreateFolderDTO) => Promise<Folder | null>
   updateFolder: (id: number, data: Partial<CreateFolderDTO>) => Promise<Folder | null>
   deleteFolder: (id: number) => Promise<Folder | null>
-  getFolderPath: (id: number) => Promise<Folder[]>
 }
 
 let folderServiceInstance: FolderService | null = null
@@ -45,11 +44,6 @@ export const createFolderService = (db: Kysely<Database>): FolderService => {
       if (data.parent_id !== undefined && data.parent_id !== null) {
         const parentFolder = await folderRepository.findById(data.parent_id)
         if (!parentFolder) return null
-
-        const parentPath = await folderRepository.getPath(data.parent_id)
-        if (parentPath.some(folder => folder.id === id)) {
-          return null
-        }
       }
 
       return await folderRepository.update(id, data)
@@ -57,10 +51,6 @@ export const createFolderService = (db: Kysely<Database>): FolderService => {
 
     async deleteFolder(id: number) {
       return await folderRepository.remove(id)
-    },
-
-    async getFolderPath(id: number) {
-      return await folderRepository.getPath(id)
     },
   }
 

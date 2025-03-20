@@ -10,7 +10,6 @@ const mockRepository = {
   create: vi.fn(),
   update: vi.fn(),
   remove: vi.fn(),
-  getPath: vi.fn(),
 }
 
 vi.mock('../../repositories/folderRepository', () => ({
@@ -120,7 +119,6 @@ describe('FolderService', () => {
       mockRepository.findById
         .mockResolvedValueOnce(mockFolder)
         .mockResolvedValueOnce({ id: 2, name: 'Parent Folder' })
-      mockRepository.getPath.mockResolvedValue([{ id: 2 }])
       mockRepository.update.mockResolvedValue({ ...mockFolder, ...updateData })
 
       const result = await folderService.updateFolder(1, updateData)
@@ -130,19 +128,6 @@ describe('FolderService', () => {
         ...updateData,
       })
       expect(mockRepository.update).toHaveBeenCalledWith(1, updateData)
-    })
-
-    it('should prevent circular references', async () => {
-      const updateData = {
-        parent_id: 2,
-      }
-      mockRepository.findById.mockResolvedValueOnce(mockFolder).mockResolvedValueOnce({ id: 2 })
-      mockRepository.getPath.mockResolvedValue([{ id: 2 }, { id: 1 }])
-
-      const result = await folderService.updateFolder(1, updateData)
-
-      expect(result).toBeNull()
-      expect(mockRepository.update).not.toHaveBeenCalled()
     })
   })
 
@@ -163,31 +148,6 @@ describe('FolderService', () => {
 
       expect(result).toBeNull()
       expect(mockRepository.remove).toHaveBeenCalledWith(999)
-    })
-  })
-
-  describe('getFolderPath', () => {
-    it('should return the path to a folder', async () => {
-      const mockPath = [
-        { id: 1, name: 'Root' },
-        { id: 2, name: 'Parent' },
-        { id: 3, name: 'Current' },
-      ]
-      mockRepository.getPath.mockResolvedValue(mockPath)
-
-      const result = await folderService.getFolderPath(3)
-
-      expect(result).toEqual(mockPath)
-      expect(mockRepository.getPath).toHaveBeenCalledWith(3)
-    })
-
-    it('should return empty array for non-existent folder', async () => {
-      mockRepository.getPath.mockResolvedValue([])
-
-      const result = await folderService.getFolderPath(999)
-
-      expect(result).toEqual([])
-      expect(mockRepository.getPath).toHaveBeenCalledWith(999)
     })
   })
 })

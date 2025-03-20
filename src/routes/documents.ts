@@ -33,21 +33,6 @@ const updateDocumentSchema = z.object({
  *         schema:
  *           type: integer
  *         description: Filter documents by folder ID
- *       - in: query
- *         name: page
- *         schema:
- *           type: integer
- *           minimum: 1
- *           default: 1
- *         description: Page number
- *       - in: query
- *         name: limit
- *         schema:
- *           type: integer
- *           minimum: 1
- *           maximum: 100
- *           default: 10
- *         description: Number of items per page
  *     responses:
  *       200:
  *         $ref: '#/components/responses/DocumentResponse'
@@ -63,6 +48,28 @@ router.get(
   })
 )
 
+/**
+ * @swagger
+ * /documents/{id}:
+ *   get:
+ *     summary: Get document by ID
+ *     description: Retrieve a single document by its ID
+ *     tags: [Documents]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: integer
+ *         required: true
+ *         description: Document ID
+ *     responses:
+ *       200:
+ *         $ref: '#/components/responses/SingleDocumentResponse'
+ *       404:
+ *         $ref: '#/components/responses/ErrorResponse'
+ *       500:
+ *         $ref: '#/components/responses/ErrorResponse'
+ */
 router.get(
   '/:id',
   asyncHandler(async (req, res) => {
@@ -79,20 +86,38 @@ router.get(
  * /documents:
  *   post:
  *     summary: Create a new document
- *     description: Creates a new document with random data, optionally in a specified folder
+ *     description: Create a new document with the provided data
  *     tags: [Documents]
  *     requestBody:
+ *       required: true
  *       content:
  *         application/json:
  *           schema:
  *             type: object
+ *             required:
+ *               - name
+ *               - type
+ *               - size
+ *               - created_by
  *             properties:
+ *               name:
+ *                 type: string
+ *               type:
+ *                 type: string
+ *               size:
+ *                 type: number
  *               folder_id:
  *                 type: integer
- *                 description: Optional folder ID to place the document in
+ *                 nullable: true
+ *               created_by:
+ *                 type: string
  *     responses:
  *       201:
  *         $ref: '#/components/responses/SingleDocumentResponse'
+ *       400:
+ *         $ref: '#/components/responses/ErrorResponse'
+ *       500:
+ *         $ref: '#/components/responses/ErrorResponse'
  */
 router.post(
   '/',
@@ -106,6 +131,40 @@ router.post(
   })
 )
 
+/**
+ * @swagger
+ * /documents/{id}:
+ *   put:
+ *     summary: Update a document
+ *     description: Update an existing document by its ID
+ *     tags: [Documents]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: integer
+ *         required: true
+ *         description: Document ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *               folder_id:
+ *                 type: integer
+ *                 nullable: true
+ *     responses:
+ *       200:
+ *         $ref: '#/components/responses/SingleDocumentResponse'
+ *       404:
+ *         $ref: '#/components/responses/ErrorResponse'
+ *       500:
+ *         $ref: '#/components/responses/ErrorResponse'
+ */
 router.put(
   '/:id',
   asyncHandler(async (req, res) => {
@@ -118,6 +177,28 @@ router.put(
   })
 )
 
+/**
+ * @swagger
+ * /documents/{id}:
+ *   delete:
+ *     summary: Delete a document
+ *     description: Delete an existing document by its ID
+ *     tags: [Documents]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         schema:
+ *           type: integer
+ *         required: true
+ *         description: Document ID
+ *     responses:
+ *       200:
+ *         $ref: '#/components/responses/SingleDocumentResponse'
+ *       404:
+ *         $ref: '#/components/responses/ErrorResponse'
+ *       500:
+ *         $ref: '#/components/responses/ErrorResponse'
+ */
 router.delete(
   '/:id',
   asyncHandler(async (req, res) => {

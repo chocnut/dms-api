@@ -91,49 +91,6 @@ router.get(
 
 /**
  * @swagger
- * /folders/{id}/path:
- *   get:
- *     summary: Get folder path
- *     description: Retrieve the path from root to the specified folder
- *     tags: [Folders]
- *     parameters:
- *       - in: path
- *         name: id
- *         schema:
- *           type: integer
- *         required: true
- *         description: Folder ID
- *     responses:
- *       200:
- *         $ref: '#/components/responses/FolderResponse'
- *       404:
- *         $ref: '#/components/responses/ErrorResponse'
- *       500:
- *         $ref: '#/components/responses/ErrorResponse'
- */
-router.get(
-  '/:id/path',
-  asyncHandler(async (req: Request, res: Response) => {
-    const id = Number(req.params.id)
-    const path = await folderService.getFolderPath(id)
-
-    if (path.length === 0) {
-      res.status(404).json({
-        status: 'error',
-        message: 'Folder not found',
-      })
-      return
-    }
-
-    res.json({
-      status: 'success',
-      data: path,
-    })
-  })
-)
-
-/**
- * @swagger
  * /folders:
  *   post:
  *     summary: Create a new folder

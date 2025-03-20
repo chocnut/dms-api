@@ -67,25 +67,5 @@ export const createFolderRepository = (db: Kysely<Database>) => {
 
       return folder
     },
-
-    async getPath(id: number): Promise<Folder[]> {
-      const folder = await this.findById(id)
-      if (!folder) return []
-
-      const path = []
-      let current = folder
-
-      while (current) {
-        path.unshift(current)
-        if (!current.parent_id) break
-
-        const parent = await this.findById(current.parent_id)
-        if (!parent) break
-
-        current = parent
-      }
-
-      return path
-    },
   }
 }
