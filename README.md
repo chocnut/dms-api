@@ -1,6 +1,6 @@
 # Document Management System API
 
-![Tests](https://github.com/chocnut/v/actions/workflows/backend-test.yml/badge.svg)
+![Test Status](https://github.com/chocnut/dms-api/actions/workflows/test.yml/badge.svg)
 
 A RESTful API for managing documents and folders in a document management system.
 
@@ -73,10 +73,12 @@ pnpm swagger:check
 ## API Endpoints
 
 ### System
+
 - `GET /health` - Health check endpoint
 - `GET /api-docs` - Interactive API documentation (Swagger UI)
 
 ### Files
+
 - `GET /api/files` - List all files and folders
   - Query Parameters:
     - `folder_id` (optional): Filter by folder ID
@@ -87,6 +89,7 @@ pnpm swagger:check
     - `search`: Search term for file names
 
 ### Folders
+
 - `GET /api/folders` - List all folders
   - Query Parameters:
     - `parent_id` (optional): Filter by parent folder ID
@@ -94,6 +97,7 @@ pnpm swagger:check
 - `GET /api/folders/:id/path` - Get folder path from root
 - `POST /api/folders` - Create a new folder
   - Body:
+
     ```json
     {
       "name": "string",
@@ -101,23 +105,28 @@ pnpm swagger:check
       "created_by": "string"
     }
     ```
+
 - `PUT /api/folders/:id` - Update a folder
   - Body:
+
     ```json
     {
       "name": "string",
       "parent_id": "number|null"
     }
     ```
+
 - `DELETE /api/folders/:id` - Delete a folder and its contents
 
 ### Documents
+
 - `GET /api/documents` - List all documents
   - Query Parameters:
     - `folder_id` (optional): Filter by folder ID
 - `GET /api/documents/:id` - Get document by ID
 - `POST /api/documents` - Create a new document
   - Body:
+
     ```json
     {
       "name": "string",
@@ -127,14 +136,17 @@ pnpm swagger:check
       "created_by": "string"
     }
     ```
+
 - `PUT /api/documents/:id` - Update a document
   - Body:
+
     ```json
     {
       "name": "string",
       "folder_id": "number|null"
     }
     ```
+
 - `DELETE /api/documents/:id` - Delete a document
 
 ## Docker
