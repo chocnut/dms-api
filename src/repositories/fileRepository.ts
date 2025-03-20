@@ -58,12 +58,6 @@ export const createFileRepository = (db: Kysely<Database>) => {
       )
     },
 
-    async findByIds(ids: number[]) {
-      if (ids.length === 0) return []
-
-      return await db.selectFrom('documents').selectAll().where('id', 'in', ids).execute()
-    },
-
     async create(file: CreateFileDTO) {
       const [result] = await db
         .insertInto('documents')
@@ -90,47 +84,6 @@ export const createFileRepository = (db: Kysely<Database>) => {
       await db.deleteFrom('documents').where('id', '=', id).execute()
 
       return file
-    },
-
-    async bulkRemove(ids: number[]) {
-      if (ids.length === 0) return []
-
-      const files = await this.findByIds(ids)
-      if (files.length === 0) return []
-
-      await db.deleteFrom('documents').where('id', 'in', ids).execute()
-
-      return files
-    },
-
-    async moveToFolder(ids: number[], folderId: number | null) {
-      const files = await this.findByIds(ids)
-      if (files.length === 0) return []
-
-      await db
-        .updateTable('documents')
-        .set({ folder_id: folderId })
-        .where('id', 'in', ids)
-        .execute()
-
-      return await this.findByIds(ids)
-    },
-
-    async countByType() {
-      return await db
-        .selectFrom('documents')
-        .select(['type', db.fn.count('id').as('count')])
-        .groupBy('type')
-        .execute()
-    },
-
-    async getTotalSize() {
-      const result = await db
-        .selectFrom('documents')
-        .select(db.fn.sum('size').as('total_size'))
-        .executeTakeFirst()
-
-      return Number(result?.total_size || 0)
     },
   }
 }
